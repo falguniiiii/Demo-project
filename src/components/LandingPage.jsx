@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import FeatureCarousel from './FeatureCarousel';
-import PillAccordion from './PillAccordion'; // NEW
+import PillAccordion from './PillAccordion';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -10,6 +10,10 @@ const LandingPage = () => {
 
   const handleSignUp = () => {
     navigate('/signup');
+  };
+
+  const handleJoinMeeting = () => {
+    navigate('/meeting'); // TEMP: opens MeetingWindow route
   };
 
   const handleSubmit = (e) => {
@@ -22,7 +26,6 @@ const LandingPage = () => {
     alert('Google Sign-in feature would be implemented here');
   };
 
-  // Items for the accordion
   const featureItems = [
     {
       title: 'Do i need an account to join the meeting?',
@@ -40,14 +43,22 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
-      {/* Header */}
-      <nav className="landing-header">
+      {/* Header (sticky) */}
+      <nav
+        className="landing-header"
+        style={{ position: 'sticky', top: 0, zIndex: 1000, background: '#fff' }}
+      >
         <div className="landing-nav-container">
           <span className="landing-brand">Rural Meet</span>
           <div className="landing-nav-links">
             <button className="landing-nav-btn">Home</button>
             <button className="landing-nav-btn">About us</button>
             <button className="landing-nav-btn" onClick={handleSignUp}>Login</button>
+
+            {/* TEMP: Join Meeting button */}
+            <button className="landing-nav-btn" onClick={handleJoinMeeting}>
+              Join Meeting
+            </button>
           </div>
         </div>
       </nav>
@@ -139,6 +150,26 @@ const LandingPage = () => {
       <footer className="landing-footer">
         <p>Copyright 2025</p>
       </footer>
+
+      {/* TEMP floating debug button (easy to remove later) */}
+      <button
+        onClick={handleJoinMeeting}
+        style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 16,
+          zIndex: 2000,
+          padding: '10px 14px',
+          background: '#111',
+          color: '#fff',
+          borderRadius: 9999,
+          border: 'none',
+          boxShadow: '0 8px 20px rgba(0,0,0,.25)',
+          cursor: 'pointer'
+        }}
+      >
+        Open Meeting
+      </button>
     </div>
   );
 };
