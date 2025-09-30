@@ -1,38 +1,59 @@
 // src/components/MeetingWindow.jsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, FileText, PlusCircle, XCircle
-} from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, FileText, PlusCircle, XCircle, Upload, UserPlus, X}from'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import './MeetingWindow.css';
-
-const RIGHT_WIDTH = '47%'; // fixed right panel width on all tabs
 
 export default function MeetingWindow() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Toggle to false to see participant view (no poll creation)
+  // Host/participant
   const [isHost] = useState(true);
 
-  // AV controls
+  // Local AV states
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
+
+  // Hand raise
   const [isHandRaised, setIsHandRaised] = useState(false);
 
-  // UI state
+  // Captions
+  const [captionsOn, setCaptionsOn] = useState(false);
+  const [captions, setCaptions] = useState([]);
+  const demoLines = [
+    'Welcome everyone 👋',
+    'We will start in two minutes.',
+    'Please mute if you are not speaking.',
+    'The deck is in the Documents tab.',
+    'Any questions before we move on?',
+    'Let’s park this and revisit later.',
+    'Thanks for the update!',
+  ];
+  useEffect(() => {
+    let id;
+    if (captionsOn) {
+      id = setInterval(() => {
+        setCaptions(prev => [...prev.slice(-9), demoLines[Math.floor(Math.random() * demoLines.length)]]);
+      }, 2200);
+    }
+    return () => clearInterval(id);
+  }, [captionsOn]);
+
+  // Right-panel tabs
   const [activeTab, setActiveTab] = useState('documents'); // 'chats' | 'polls' | 'documents'
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  // Chat state
+  // Chats
   const [chatMessages, setChatMessages] = useState([
     { id: 1, user: 'John Doe', message: 'Hello everyone!', time: '10:30 AM' },
     { id: 2, user: 'Jane Smith', message: 'Great to be here', time: '10:31 AM' }
   ]);
   const [newMessage, setNewMessage] = useState('');
 
-  // Polls state (works: create/close if host, vote once per poll, show results)
+  // Polls
   const [polls, setPolls] = useState([
     {
       id: 'p-1',
@@ -42,15 +63,15 @@ export default function MeetingWindow() {
         { id: 'o-2', text: '2:00 PM', votes: 2 },
         { id: 'o-3', text: '5:00 PM', votes: 0 }
       ],
-      status: 'open' // 'open' | 'closed'
+      status: 'open'
     }
   ]);
-  const [myVotes, setMyVotes] = useState({}); // { [pollId]: optionId }
+  const [myVotes, setMyVotes] = useState({});
   const [creatingPoll, setCreatingPoll] = useState(false);
   const [newPollQ, setNewPollQ] = useState('');
-  const [newPollOptions, setNewPollOptions] = useState(''); // one option per line
+  const [newPollOptions, setNewPollOptions] = useState(''); // one per line
 
-  // Documents (preloaded only — view, open, download)
+  // Documents (preloaded + in-meeting upload)
   const guessType = (name = '') => {
     const n = name.toLowerCase();
     if (n.endsWith('.pdf')) return 'application/pdf';
@@ -70,7 +91,6 @@ export default function MeetingWindow() {
         type: d.type || guessType(d.name)
       }));
 
-  // Read preloaded docs from route state or localStorage
   const initialDocs = useMemo(() => {
     const fromState = Array.isArray(location.state?.docs) ? location.state.docs : null;
     if (fromState) return normalizeDocs(fromState);
@@ -96,49 +116,154 @@ export default function MeetingWindow() {
     [documents, activeDocId]
   );
 
-  // Emoji picker close on outside click
-  const emojiPickerRef = useRef(null);
+  // In-meeting upload (host)
+  const fileInputRef = useRef(null);
+  const handleFiles = (files) => {
+    if (!files || !files.length) return;
+    const list = Array.from(files).map((f, idx) => ({
+      id: `${Date.now()}-${idx}`,
+      name: f.name,
+      url: URL.createObjectURL(f),
+      type: f.type || guessType(f.name),
+      _blob: true
+    }));
+    setDocuments(prev => {
+      const next = [...prev, ...list];
+      if (!activeDocId && next.length) setActiveDocId(next[0].id);
+      return next;
+    });
+    setActiveDocId(list[list.length - 1].id);
+  };
+  const openUploader = () => fileInputRef.current?.click();
+
+  // Cleanup blob URLs
+  useEffect(() => {
+    return () => {
+      documents.forEach(d => {
+        if (d._blob && typeof d.url === 'string' && d.url.startsWith('blob:')) {
+          try { URL.revokeObjectURL(d.url); } catch {}
+        }
+      });
+    };
+  }, [documents]);
+
+  // Emoji portal
+  const emojiPortalRef = useRef(null);
   useEffect(() => {
     const onClick = (e) => {
-      const btn = e.target.closest('[data-emoji-button="true"]');
+      const btn = e.target.closest?.('[data-emoji-button="true"]');
       if (btn) return;
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+      if (emojiPortalRef.current && !emojiPortalRef.current.contains(e.target)) {
         setShowEmojiPicker(false);
       }
     };
-    document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  // Participants (visual only)
-  const participants = [
-    { id: 1, name: 'Sarah Johnson', isMuted: false, isVideoOff: false },
-    { id: 2, name: 'Mike Chen',     isMuted: true,  isVideoOff: false },
-    { id: 3, name: 'Alex Kumar',    isMuted: false, isVideoOff: false },
-    { id: 4, name: 'Emily Davis',   isMuted: true,  isVideoOff: false },
-    { id: 5, name: 'David Wilson',  isMuted: true,  isVideoOff: true  },
-    { id: 6, name: 'Lisa Anderson', isMuted: true,  isVideoOff: true  }
+  // Participants (dynamic)
+  const selfId = 'self';
+  const initialRemotes = [
+    { id: 'u-1', name: 'Sarah Johnson', isMuted: false, isVideoOff: false },
+    { id: 'u-2', name: 'Mike Chen',     isMuted: true,  isVideoOff: false },
+    { id: 'u-3', name: 'Alex Kumar',    isMuted: false, isVideoOff: false },
+    { id: 'u-4', name: 'Emily Davis',   isMuted: true,  isVideoOff: false },
   ];
-  const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47', '#C9A961'];
-  const gradsTo   = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C', '#F0E68C'];
+  const [participants, setParticipants] = useState([
+    { id: selfId, name: 'You', isMuted: !isMicOn, isVideoOff: !isVideoOn, isLocal: true },
+    ...initialRemotes
+  ]);
+  useEffect(() => {
+    setParticipants(prev =>
+      prev.map(p => p.id === selfId ? { ...p, isMuted: !isMicOn, isVideoOff: !isVideoOn } : p)
+    );
+  }, [isMicOn, isVideoOn]);
 
-  // Chat
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    setChatMessages(prev => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        user: 'You',
-        message: newMessage,
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }
-    ]);
-    setNewMessage('');
-    setShowEmojiPicker(false);
+  const guestNames = [
+    'Aisha Khan','Ravi Patel','Maria Garcia','Chen Wei','Aarav Sharma',
+    'Olivia Brown','Noah Davis','Liam Wilson','Emma Thompson','Lucas Martin','Mia Anderson'
+  ];
+  const addGuest = () => {
+    const name = guestNames[Math.floor(Math.random() * guestNames.length)];
+    const id = `u-${Date.now()}`;
+    setParticipants(prev => [...prev, { id, name, isMuted: false, isVideoOff: Math.random() < 0.3 }]);
+  };
+  const removeGuest = (id) => setParticipants(prev => prev.filter(p => p.id !== id));
+
+  // Grid rows adapt to participant count
+  const rows = Math.max(3, Math.ceil(participants.length / 2));
+
+  // Local media (real mic/cam)
+  const selfVideoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [mediaError, setMediaError] = useState('');
+
+  const stopStream = (s) => {
+    try { s.getTracks().forEach(t => t.stop()); } catch {}
   };
 
-  // Call end
+  const ensureMedia = async () => {
+    try {
+      setMediaError('');
+      if (!isMicOn && !isVideoOn) {
+        if (streamRef.current) {
+          stopStream(streamRef.current);
+          streamRef.current = null;
+        }
+        if (selfVideoRef.current) selfVideoRef.current.srcObject = null;
+        return;
+      }
+      // Re-acquire stream based on current toggles
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: isMicOn,
+        video: isVideoOn ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
+      });
+      if (streamRef.current) stopStream(streamRef.current);
+      streamRef.current = stream;
+      if (selfVideoRef.current) selfVideoRef.current.srcObject = stream;
+      // Always mute local video element (avoid echo)
+      if (selfVideoRef.current) selfVideoRef.current.muted = true;
+    } catch (e) {
+      const msg = e?.message || 'Could not access camera/microphone';
+      setMediaError(msg);
+      // If we have an existing stream, just toggle tracks.enabled as fallback
+      if (streamRef.current) {
+        streamRef.current.getAudioTracks().forEach(t => (t.enabled = isMicOn));
+        streamRef.current.getVideoTracks().forEach(t => (t.enabled = isVideoOn));
+      }
+    }
+  };
+
+  // Sync media on toggle changes
+  useEffect(() => {
+    ensureMedia();
+    // Cleanup on unmount
+    return () => {
+      if (streamRef.current) stopStream(streamRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMicOn, isVideoOn]);
+
+  // Toggle handlers also try to flip existing tracks immediately
+  const onToggleMic = () => {
+    setIsMicOn(prev => {
+      const next = !prev;
+      if (streamRef.current) streamRef.current.getAudioTracks().forEach(t => (t.enabled = next));
+      return next;
+    });
+  };
+  const onToggleVideo = async () => {
+    setIsVideoOn(prev => {
+      const next = !prev;
+      if (streamRef.current) {
+        const vTracks = streamRef.current.getVideoTracks();
+        if (vTracks.length) vTracks.forEach(t => (t.enabled = next));
+      }
+      return next;
+    });
+  };
+
+  // Leave call
   const handleEndCall = () => {
     if (window.confirm('End the call?')) navigate('/');
   };
@@ -147,48 +272,35 @@ export default function MeetingWindow() {
   const isImage = (doc) => doc?.type?.startsWith('image/');
   const isPdf   = (doc) => (doc?.type === 'application/pdf') || /\.pdf$/i.test(doc?.name || '');
 
-  // Polls logic
+  // Polls helpers
   const totalVotes = (poll) => poll.options.reduce((a, o) => a + o.votes, 0);
   const percent = (part, total) => total === 0 ? 0 : Math.round((part / total) * 100);
-
   const vote = (pollId, optionId) => {
-    if (myVotes[pollId]) return; // already voted
+    if (myVotes[pollId]) return;
     setPolls(prev => prev.map(p => {
       if (p.id !== pollId || p.status !== 'open') return p;
-      return {
-        ...p,
-        options: p.options.map(o => o.id === optionId ? { ...o, votes: o.votes + 1 } : o)
-      };
+      return { ...p, options: p.options.map(o => o.id === optionId ? { ...o, votes: o.votes + 1 } : o) };
     }));
     setMyVotes(prev => ({ ...prev, [pollId]: optionId }));
   };
-
   const toggleCreatePoll = () => setCreatingPoll(v => !v);
   const addPoll = () => {
     const q = newPollQ.trim();
     const opts = newPollOptions.split('\n').map(s => s.trim()).filter(Boolean);
-    if (!q || opts.length < 2) {
-      alert('Add a question and at least 2 options (each on a new line).');
-      return;
-    }
+    if (!q || opts.length < 2) { alert('Add a question and at least 2 options (each on a new line).'); return; }
     const id = `p-${Date.now()}`;
-    setPolls(prev => [
-      {
-        id,
-        question: q,
-        options: opts.map((t, i) => ({ id: `o-${i}-${Date.now()}`, text: t, votes: 0 })),
-        status: 'open'
-      },
-      ...prev
-    ]);
-    setCreatingPoll(false);
-    setNewPollQ('');
-    setNewPollOptions('');
+    setPolls(prev => [{ id, question: q, options: opts.map((t, i) => ({ id: `o-${i}-${Date.now()}`, text: t, votes: 0 })), status: 'open' }, ...prev]);
+    setCreatingPoll(false); setNewPollQ(''); setNewPollOptions('');
   };
+  const closePoll = (pollId) => setPolls(prev => prev.map(p => p.id === pollId ? { ...p, status: 'closed' } : p));
 
-  const closePoll = (pollId) => {
-    setPolls(prev => prev.map(p => p.id === pollId ? { ...p, status: 'closed' } : p));
-  };
+  // Gradients for remote placeholders
+  const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47', '#C9A961'];
+  const gradsTo   = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C', '#F0E68C'];
+
+  // Helpers
+  const hasLocalVideo = () =>
+    !!(streamRef.current && streamRef.current.getVideoTracks().some(t => t.enabled));
 
   return (
     <div className="meeting">
@@ -196,31 +308,82 @@ export default function MeetingWindow() {
       <div className="meeting__left">
         <div className="meeting__grid-pad">
           <div className="meeting__grid-wrap">
-            <div className="meeting__grid">
-              {participants.map((p, idx) => (
-                <div key={p.id} className="tile">
-                  <div
-                    className="tile__video"
-                    style={{
-                      background: p.isVideoOff
-                        ? '#1a1a1a'
-                        : `linear-gradient(135deg, ${gradsFrom[idx]} 20%, ${gradsTo[idx]} 80%)`
-                    }}
-                  />
-                  <div className="tile__badge">
-                    {p.isMuted ? <MicOff size={16} color="#fff" /> : <Mic size={16} color="#fff" />}
+            <div
+              className="meeting__grid"
+              style={{ gridTemplateRows: `repeat(${rows}, 1fr)` }}
+            >
+              {participants.map((p, idx) => {
+                const isLocal = p.isLocal;
+                const muted = isLocal ? !isMicOn : p.isMuted;
+                const vOff  = isLocal ? !isVideoOn : p.isVideoOff;
+
+                return (
+                  <div key={p.id} className="tile">
+                    <div
+                      className="tile__video"
+                      style={{
+                        background: vOff
+                          ? '#1a1a1a'
+                          : `linear-gradient(135deg, ${gradsFrom[idx % gradsFrom.length]} 20%, ${gradsTo[idx % gradsTo.length]} 80%)`
+                      }}
+                    >
+                      {isLocal && hasLocalVideo() && (
+                        <video
+                          ref={selfVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                      {vOff && (
+                        <div className="tile__avatar">
+                          {p.name.split(' ').map(n => n[0]).join('').slice(0,2)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="tile__badge">
+                      {muted ? <MicOff size={16} color="#fff" /> : <Mic size={16} color="#fff" />}
+                    </div>
+                    <div className="tile__name">{p.name}</div>
+
+                    {isHost && !isLocal && (
+                      <button className="tile__close" title="Remove" onClick={() => removeGuest(p.id)}>
+                        <X size={14} color="#fff" />
+                      </button>
+                    )}
                   </div>
-                  <div className="tile__name">{p.name}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
 
+        {/* Captions overlay */}
+        {captionsOn && (
+          <div className="captions">
+            {captions.map((line, i) => (
+              <div key={i} className="captions__line">{line}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Media error toast */}
+        {mediaError && (
+          <div style={{
+            position: 'absolute', left: 16, bottom: 86, zIndex: 10,
+            background: 'rgba(0,0,0,.75)', color: '#fff', padding: '8px 10px',
+            borderRadius: 8, fontSize: 12, maxWidth: 360
+          }}>
+            {mediaError}
+          </div>
+        )}
+
         {/* Floating controls */}
         <div className="controls">
           <button
-            onClick={() => setIsMicOn(v => !v)}
+            onClick={onToggleMic}
             className={`btn-round ${!isMicOn ? 'btn-round--off' : ''}`}
             title="Toggle microphone"
           >
@@ -228,7 +391,7 @@ export default function MeetingWindow() {
           </button>
 
           <button
-            onClick={() => setIsVideoOn(v => !v)}
+            onClick={onToggleVideo}
             className={`btn-round ${!isVideoOn ? 'btn-round--off' : ''}`}
             title="Toggle camera"
           >
@@ -243,7 +406,12 @@ export default function MeetingWindow() {
             <Hand size={24} color={isHandRaised ? '#eab308' : '#000'} />
           </button>
 
-          <button className="btn-round" title="Closed captions" style={{ fontWeight: 800, fontSize: 16 }}>
+          <button
+            onClick={() => setCaptionsOn(v => !v)}
+            className="btn-round"
+            title={captionsOn ? 'Turn captions off' : 'Turn captions on'}
+            style={{ background: captionsOn ? '#0e0e0e' : '#fff', color: captionsOn ? '#fff' : '#000' }}
+          >
             CC
           </button>
 
@@ -254,10 +422,12 @@ export default function MeetingWindow() {
         </div>
       </div>
 
-      {/* Right: Sidebar (fixed 47%) */}
-      <aside className="meeting__right" style={{ flex: `0 0 ${RIGHT_WIDTH}`, width: RIGHT_WIDTH, maxWidth: RIGHT_WIDTH }}>
-        {/* Tabs */}
+      {/* Right: Sidebar */}
+      <aside className="meeting__right">
+        {/* Tabs + actions */}
         <div className="tabs">
+          <div className="tabs__count">{participants.length} joined</div>
+
           <div className="tabgroup">
             {['chats', 'polls', 'documents'].map(tab => (
               <button
@@ -268,6 +438,29 @@ export default function MeetingWindow() {
                 {tab[0].toUpperCase() + tab.slice(1)}
               </button>
             ))}
+          </div>
+
+          <div className="tabs__actions">
+            {isHost && (
+              <>
+                <button className="tabs__btn" onClick={addGuest} title="Add guest (simulate)">
+                  <UserPlus size={16} />
+                  <span>Guest</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.doc,.docx"
+                  multiple
+                  onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                  style={{ display: 'none' }}
+                />
+                <button className="tabs__btn" onClick={openUploader} title="Upload documents">
+                  <Upload size={16} />
+                  <span>Upload</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -288,8 +481,8 @@ export default function MeetingWindow() {
                 ))}
               </div>
 
-              {showEmojiPicker && (
-                <div ref={emojiPickerRef} className="emoji-picker">
+              {showEmojiPicker && createPortal(
+                <div ref={emojiPortalRef} className="emoji-portal">
                   <EmojiPicker
                     onEmojiClick={(emoji) => setNewMessage(prev => prev + emoji.emoji)}
                     theme="light"
@@ -297,10 +490,11 @@ export default function MeetingWindow() {
                     searchDisabled={false}
                     skinTonesDisabled={false}
                     previewConfig={{ showPreview: false }}
-                    height={360}
-                    width={320}
+                    height={380}
+                    width={340}
                   />
-                </div>
+                </div>,
+                document.body
               )}
 
               <div className="composer">
@@ -316,11 +510,11 @@ export default function MeetingWindow() {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), setShowEmojiPicker(false), setNewMessage(prev => prev.trim() ? prev : prev), handleSend())}
                   placeholder="Type a message..."
                   className="input"
                 />
-                <button onClick={handleSendMessage} className="send-btn">
+                <button onClick={handleSend} className="send-btn">
                   <Send size={18} />
                 </button>
               </div>
@@ -425,7 +619,7 @@ Option C`}
             </div>
           )}
 
-          {/* Documents (preloaded only; no uploads here) */}
+          {/* Documents */}
           {activeTab === 'documents' && (
             <div className="docs">
               <div className="docs__bar">
@@ -500,4 +694,21 @@ Option C`}
       </aside>
     </div>
   );
+
+  // helper inside component to send message (kept here to keep JSX tidy)
+  function handleSend() {
+    const trimmed = newMessage.trim();
+    if (!trimmed) return;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: prev.length + 1,
+        user: 'You',
+        message: trimmed,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setNewMessage('');
+    setShowEmojiPicker(false);
+  }
 }
