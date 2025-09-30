@@ -296,7 +296,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .poll-option:hover{background:#f9fafb;border-color:#0e0e0e;}
 
 .poll-results{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
-.result-row{}
+
 .result-top{display:flex;justify-content:space-between;margin-bottom:6px;}
 .result-label,.result-pct{font-size:14px;color:#111;}
 .progress{width:100%;height:10px;background:#eee;border-radius:999px;overflow:hidden;}
