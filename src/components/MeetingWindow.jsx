@@ -1,39 +1,116 @@
 // src/components/MeetingWindow.jsx
-import React, { useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, Trash2, Upload, FileText
+  Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, FileText, PlusCircle, XCircle
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import './MeetingWindow.css';
+
+const RIGHT_WIDTH = '47%'; // fixed right panel width on all tabs
 
 export default function MeetingWindow() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Simulate role: set true for host-only controls
+  // Toggle to false to see participant view (no poll creation)
   const [isHost] = useState(true);
 
+  // AV controls
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isHandRaised, setIsHandRaised] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('documents');
+  // UI state
+  const [activeTab, setActiveTab] = useState('documents'); // 'chats' | 'polls' | 'documents'
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // Chat state
   const [chatMessages, setChatMessages] = useState([
     { id: 1, user: 'John Doe', message: 'Hello everyone!', time: '10:30 AM' },
     { id: 2, user: 'Jane Smith', message: 'Great to be here', time: '10:31 AM' }
   ]);
   const [newMessage, setNewMessage] = useState('');
 
-  // Documents state
-  const [documents, setDocuments] = useState([]); // [{id, name, url, type, size}]
-  const [activeDocId, setActiveDocId] = useState(null);
+  // Polls state (works: create/close if host, vote once per poll, show results)
+  const [polls, setPolls] = useState([
+    {
+      id: 'p-1',
+      question: 'What time works best for the next meeting?',
+      options: [
+        { id: 'o-1', text: '9:00 AM', votes: 1 },
+        { id: 'o-2', text: '2:00 PM', votes: 2 },
+        { id: 'o-3', text: '5:00 PM', votes: 0 }
+      ],
+      status: 'open' // 'open' | 'closed'
+    }
+  ]);
+  const [myVotes, setMyVotes] = useState({}); // { [pollId]: optionId }
+  const [creatingPoll, setCreatingPoll] = useState(false);
+  const [newPollQ, setNewPollQ] = useState('');
+  const [newPollOptions, setNewPollOptions] = useState(''); // one option per line
+
+  // Documents (preloaded only — view, open, download)
+  const guessType = (name = '') => {
+    const n = name.toLowerCase();
+    if (n.endsWith('.pdf')) return 'application/pdf';
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+    if (n.endsWith('.webp')) return 'image/webp';
+    if (n.endsWith('.gif')) return 'image/gif';
+    return '';
+  };
+  const normalizeDocs = (arr = []) =>
+    arr
+      .filter(d => d && d.url && d.name)
+      .map((d, idx) => ({
+        id: d.id || `${Date.now()}-${idx}`,
+        name: d.name,
+        url: d.url,
+        type: d.type || guessType(d.name)
+      }));
+
+  // Read preloaded docs from route state or localStorage
+  const initialDocs = useMemo(() => {
+    const fromState = Array.isArray(location.state?.docs) ? location.state.docs : null;
+    if (fromState) return normalizeDocs(fromState);
+    const raw = localStorage.getItem('meetingDocs');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return normalizeDocs(parsed);
+      } catch {}
+    }
+    return [];
+  }, [location.state]);
+
+  const [documents, setDocuments] = useState(initialDocs);
+  const [activeDocId, setActiveDocId] = useState(initialDocs[0]?.id || null);
+  useEffect(() => {
+    setDocuments(initialDocs);
+    if (initialDocs.length) setActiveDocId(initialDocs[0].id);
+  }, [initialDocs]);
+
   const activeDoc = useMemo(
     () => documents.find(d => d.id === activeDocId) || null,
     [documents, activeDocId]
   );
-  const fileInputRef = useRef(null);
 
+  // Emoji picker close on outside click
+  const emojiPickerRef = useRef(null);
+  useEffect(() => {
+    const onClick = (e) => {
+      const btn = e.target.closest('[data-emoji-button="true"]');
+      if (btn) return;
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, []);
+
+  // Participants (visual only)
   const participants = [
     { id: 1, name: 'Sarah Johnson', isMuted: false, isVideoOff: false },
     { id: 2, name: 'Mike Chen',     isMuted: true,  isVideoOff: false },
@@ -42,13 +119,13 @@ export default function MeetingWindow() {
     { id: 5, name: 'David Wilson',  isMuted: true,  isVideoOff: true  },
     { id: 6, name: 'Lisa Anderson', isMuted: true,  isVideoOff: true  }
   ];
-
   const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47', '#C9A961'];
   const gradsTo   = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C', '#F0E68C'];
 
+  // Chat
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
-    setChatMessages(prev => ([
+    setChatMessages(prev => [
       ...prev,
       {
         id: prev.length + 1,
@@ -56,319 +133,167 @@ export default function MeetingWindow() {
         message: newMessage,
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       }
-    ]));
+    ]);
     setNewMessage('');
     setShowEmojiPicker(false);
   };
 
+  // Call end
   const handleEndCall = () => {
-    if (window.confirm('End the call?')) {
-      navigate('/'); // go back to home
-    }
+    if (window.confirm('End the call?')) navigate('/');
   };
 
-  // File uploads (host only)
-  const handleFiles = (files) => {
-    const list = Array.from(files).map((f, idx) => ({
-      id: `${Date.now()}-${idx}`,
-      name: f.name,
-      url: URL.createObjectURL(f),
-      type: f.type || 'application/octet-stream',
-      size: f.size
-    }));
-    setDocuments(prev => {
-      const next = [...prev, ...list];
-      if (!activeDocId && next.length) setActiveDocId(next[0].id);
-      return next;
-    });
-  };
-
-  const onClickUpload = () => fileInputRef.current?.click();
-
-  const onDeleteDoc = (id) => {
-    setDocuments(prev => prev.filter(d => d.id !== id));
-    if (activeDocId === id) {
-      const remaining = documents.filter(d => d.id !== id);
-      setActiveDocId(remaining[0]?.id || null);
-    }
-  };
-
-  const isImage = (doc) => doc?.type.startsWith('image/');
+  // Docs helpers
+  const isImage = (doc) => doc?.type?.startsWith('image/');
   const isPdf   = (doc) => (doc?.type === 'application/pdf') || /\.pdf$/i.test(doc?.name || '');
 
-  // 40% width for Documents panel
-  const rightWidth = activeTab === 'documents' ? '40%' : 430;
+  // Polls logic
+  const totalVotes = (poll) => poll.options.reduce((a, o) => a + o.votes, 0);
+  const percent = (part, total) => total === 0 ? 0 : Math.round((part / total) * 100);
+
+  const vote = (pollId, optionId) => {
+    if (myVotes[pollId]) return; // already voted
+    setPolls(prev => prev.map(p => {
+      if (p.id !== pollId || p.status !== 'open') return p;
+      return {
+        ...p,
+        options: p.options.map(o => o.id === optionId ? { ...o, votes: o.votes + 1 } : o)
+      };
+    }));
+    setMyVotes(prev => ({ ...prev, [pollId]: optionId }));
+  };
+
+  const toggleCreatePoll = () => setCreatingPoll(v => !v);
+  const addPoll = () => {
+    const q = newPollQ.trim();
+    const opts = newPollOptions.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!q || opts.length < 2) {
+      alert('Add a question and at least 2 options (each on a new line).');
+      return;
+    }
+    const id = `p-${Date.now()}`;
+    setPolls(prev => [
+      {
+        id,
+        question: q,
+        options: opts.map((t, i) => ({ id: `o-${i}-${Date.now()}`, text: t, votes: 0 })),
+        status: 'open'
+      },
+      ...prev
+    ]);
+    setCreatingPoll(false);
+    setNewPollQ('');
+    setNewPollOptions('');
+  };
+
+  const closePoll = (pollId) => {
+    setPolls(prev => prev.map(p => p.id === pollId ? { ...p, status: 'closed' } : p));
+  };
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      backgroundColor: '#000',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      overflow: 'hidden'
-    }}>
+    <div className="meeting">
       {/* Left: Video area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* Rounded grid container */}
-        <div style={{ flex: 1, padding: 12, position: 'relative' }}>
-          <div style={{
-            height: '100%',
-            borderRadius: 24,
-            overflow: 'hidden',
-            backgroundColor: '#000',
-            border: '1px solid #1a1a1a'
-          }}>
-            <div style={{
-              height: '100%',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gridTemplateRows: 'repeat(3, 1fr)',
-              gap: 4,
-              backgroundColor: '#000'
-            }}>
+      <div className="meeting__left">
+        <div className="meeting__grid-pad">
+          <div className="meeting__grid-wrap">
+            <div className="meeting__grid">
               {participants.map((p, idx) => (
-                <div key={p.id} style={{
-                  position: 'relative',
-                  backgroundColor: '#1a1a1a',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {/* Video placeholder */}
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    background: p.isVideoOff
-                      ? '#1a1a1a'
-                      : `linear-gradient(135deg, ${gradsFrom[idx]} 20%, ${gradsTo[idx]} 80%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {p.isVideoOff && (
-                      <div style={{
-                        width: 80, height: 80, borderRadius: '50%',
-                        backgroundColor: '#3a3a3a',
-                        color: '#fff', fontWeight: 700, fontSize: 28,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        {p.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                    )}
+                <div key={p.id} className="tile">
+                  <div
+                    className="tile__video"
+                    style={{
+                      background: p.isVideoOff
+                        ? '#1a1a1a'
+                        : `linear-gradient(135deg, ${gradsFrom[idx]} 20%, ${gradsTo[idx]} 80%)`
+                    }}
+                  />
+                  <div className="tile__badge">
+                    {p.isMuted ? <MicOff size={16} color="#fff" /> : <Mic size={16} color="#fff" />}
                   </div>
-
-                  {/* Status + name bottom-left */}
-                  <div style={{ position: 'absolute', bottom: 8, left: 8 }}>
-                    <div style={{
-                      width: 26, height: 26, borderRadius: 8,
-                      background: 'rgba(0,0,0,.65)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      {p.isMuted ? <MicOff size={16} color="#fff" /> : <Mic size={16} color="#fff" />}
-                    </div>
-                  </div>
-
-                  <div style={{ position: 'absolute', bottom: 8, left: 44 }}>
-                    <span style={{
-                      color: '#fff', fontSize: 14,
-                      backgroundColor: 'rgba(0,0,0,.6)',
-                      padding: '4px 10px', borderRadius: 6, fontWeight: 500
-                    }}>
-                      {p.name}
-                    </span>
-                  </div>
+                  <div className="tile__name">{p.name}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Floating control bar */}
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          bottom: 14,
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          backgroundColor: '#121212',
-          padding: '10px 14px',
-          borderRadius: 36,
-          boxShadow: '0 14px 40px rgba(0,0,0,.45)',
-          zIndex: 5
-        }}>
-          {/* Mic */}
+        {/* Floating controls */}
+        <div className="controls">
           <button
             onClick={() => setIsMicOn(v => !v)}
+            className={`btn-round ${!isMicOn ? 'btn-round--off' : ''}`}
             title="Toggle microphone"
-            style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: isMicOn ? '#fff' : '#4a4a4a',
-              border: '1px solid #e5e7eb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer'
-            }}
           >
             {isMicOn ? <Mic size={24} color="#000" /> : <MicOff size={24} color="#fff" />}
           </button>
 
-          {/* Video */}
           <button
             onClick={() => setIsVideoOn(v => !v)}
+            className={`btn-round ${!isVideoOn ? 'btn-round--off' : ''}`}
             title="Toggle camera"
-            style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: isVideoOn ? '#fff' : '#4a4a4a',
-              border: '1px solid #e5e7eb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer'
-            }}
           >
             {isVideoOn ? <Video size={24} color="#000" /> : <VideoOff size={24} color="#fff" />}
           </button>
 
-          {/* Hand */}
           <button
             onClick={() => setIsHandRaised(v => !v)}
+            className="btn-round"
             title="Raise hand"
-            style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer'
-            }}
           >
             <Hand size={24} color={isHandRaised ? '#eab308' : '#000'} />
           </button>
 
-          {/* CC */}
-          <button
-            title="Closed captions"
-            style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: '#fff', border: '1px solid #e5e7eb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 800, fontSize: 16, cursor: 'pointer'
-            }}
-          >
+          <button className="btn-round" title="Closed captions" style={{ fontWeight: 800, fontSize: 16 }}>
             CC
           </button>
 
-          {/* End call */}
-          <button
-            onClick={handleEndCall}
-            title="End call"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 8, padding: '0 18px',
-              height: 56, borderRadius: 28,
-              background: '#e11d48', color: '#fff', border: 'none',
-              cursor: 'pointer', fontWeight: 700
-            }}
-          >
+          <button onClick={handleEndCall} className="btn-pill-danger" title="End call">
             <PhoneOff size={22} color="#fff" />
             End
           </button>
         </div>
       </div>
 
-      {/* Right: Sidebar (40% when on Documents) */}
-      <div style={{
-        width: rightWidth,
-        backgroundColor: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        borderLeft: '1px solid #e5e7eb',
-        position: 'relative',
-        transition: 'width .25s ease'
-      }}>
-        {/* Centered pill tabs */}
-        <div style={{
-          padding: 10,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: '#fff',
-          position: 'sticky',
-          top: 0,
-          zIndex: 5,
-          borderBottom: '1px solid #e5e7eb'
-        }}>
-          <div style={{
-            background: '#0e0e0e',
-            borderRadius: 999,
-            padding: 6,
-            display: 'inline-flex',
-            gap: 6
-          }}>
-            {['chats', 'polls', 'documents'].map(tab => {
-              const isActive = activeTab === tab;
-              const label = tab[0].toUpperCase() + tab.slice(1);
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: isActive ? '#fff' : 'transparent',
-                    color: isActive ? '#0e0e0e' : '#fff',
-                    fontWeight: 700,
-                    fontSize: 16
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
+      {/* Right: Sidebar (fixed 47%) */}
+      <aside className="meeting__right" style={{ flex: `0 0 ${RIGHT_WIDTH}`, width: RIGHT_WIDTH, maxWidth: RIGHT_WIDTH }}>
+        {/* Tabs */}
+        <div className="tabs">
+          <div className="tabgroup">
+            {['chats', 'polls', 'documents'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`tab ${activeTab === tab ? 'active' : ''}`}
+              >
+                {tab[0].toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tab content */}
-        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        {/* Content */}
+        <div className="content">
           {/* Chats */}
           {activeTab === 'chats' && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-              <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
+            <div className="chats">
+              <div className="chats__list">
                 {chatMessages.map((msg) => (
-                  <div key={msg.id} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{msg.user}</span>
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>{msg.time}</span>
+                  <div key={msg.id} className="msg">
+                    <div className="msg__head">
+                      <span className="msg__user">{msg.user}</span>
+                      <span className="msg__time">{msg.time}</span>
                     </div>
-                    <div style={{
-                      background: '#f3f4f6',
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      fontSize: 14,
-                      color: '#374151'
-                    }}>
-                      {msg.message}
-                    </div>
+                    <div className="msg__bubble">{msg.message}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Full emoji picker */}
               {showEmojiPicker && (
-                <div style={{
-                  position: 'absolute',
-                  left: 16,
-                  bottom: 88,
-                  zIndex: 20,
-                  boxShadow: '0 20px 50px rgba(0,0,0,.25)',
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                  background: '#fff'
-                }}>
+                <div ref={emojiPickerRef} className="emoji-picker">
                   <EmojiPicker
-                    onEmojiClick={(emojiData) => setNewMessage(prev => prev + emojiData.emoji)}
+                    onEmojiClick={(emoji) => setNewMessage(prev => prev + emoji.emoji)}
                     theme="light"
+                    lazyLoadEmojis
                     searchDisabled={false}
                     skinTonesDisabled={false}
                     previewConfig={{ showPreview: false }}
@@ -378,20 +303,11 @@ export default function MeetingWindow() {
                 </div>
               )}
 
-              {/* Composer */}
-              <div style={{
-                padding: 16,
-                borderTop: '1px solid #e5e7eb',
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center'
-              }}>
+              <div className="composer">
                 <button
+                  data-emoji-button="true"
                   onClick={() => setShowEmojiPicker(v => !v)}
-                  style={{
-                    padding: 8, background: 'transparent',
-                    border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer'
-                  }}
+                  className="emoji-btn"
                   aria-label="Emoji picker"
                 >
                   <Smile size={20} color="#6b7280" />
@@ -402,29 +318,9 @@ export default function MeetingWindow() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Type a message..."
-                  style={{
-                    flex: 1,
-                    padding: '10px 12px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    outline: 'none'
-                  }}
+                  className="input"
                 />
-                <button
-                  onClick={handleSendMessage}
-                  style={{
-                    padding: '10px 16px',
-                    background: '#0e0e0e',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
+                <button onClick={handleSendMessage} className="send-btn">
                   <Send size={18} />
                 </button>
               </div>
@@ -433,217 +329,175 @@ export default function MeetingWindow() {
 
           {/* Polls */}
           {activeTab === 'polls' && (
-            <div style={{ padding: 20 }}>
-              <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 16, color: '#111827' }}>
-                Active Polls
-              </h3>
-              <div style={{ background: '#f9fafb', padding: 16, borderRadius: 10, marginBottom: 16 }}>
-                <p style={{ fontWeight: 600, marginBottom: 12, color: '#374151' }}>
-                  What time works best for the next meeting?
-                </p>
-                {['9:00 AM', '2:00 PM', '5:00 PM'].map((option, idx) => (
-                  <button
-                    key={idx}
-                    style={{
-                      width: '100%',
-                      padding: 10,
-                      marginBottom: 8,
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: 14
-                    }}
-                  >
-                    {option}
+            <div className="polls">
+              {isHost && (
+                <div className="polls__creator">
+                  <button className="creator__toggle" onClick={toggleCreatePoll}>
+                    {creatingPoll ? <><XCircle size={18} /> Cancel</> : <><PlusCircle size={18} /> Create Poll</>}
                   </button>
-                ))}
+
+                  {creatingPoll && (
+                    <div className="creator__form">
+                      <label className="creator__label">Question</label>
+                      <input
+                        value={newPollQ}
+                        onChange={(e) => setNewPollQ(e.target.value)}
+                        placeholder="Type your poll question"
+                        className="creator__input"
+                      />
+                      <label className="creator__label">Options (one per line)</label>
+                      <textarea
+                        value={newPollOptions}
+                        onChange={(e) => setNewPollOptions(e.target.value)}
+                        placeholder={`Option A
+Option B
+Option C`}
+                        rows={4}
+                        className="creator__textarea"
+                      />
+                      <div className="creator__actions">
+                        <button onClick={addPoll} className="creator__create">Add Poll</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="polls__list">
+                {polls.map((poll) => {
+                  const total = totalVotes(poll);
+                  const votedOptionId = myVotes[poll.id];
+                  const hasVoted = !!votedOptionId || poll.status === 'closed';
+
+                  return (
+                    <div key={poll.id} className="poll-card">
+                      <div className="poll-card__head">
+                        <h4 className="poll-card__q">{poll.question}</h4>
+                        <div className="poll-card__meta">
+                          <span className={`poll-badge ${poll.status}`}>{poll.status}</span>
+                          <span className="poll-total">{total} votes</span>
+                          {isHost && poll.status === 'open' && (
+                            <button className="poll-close" onClick={() => closePoll(poll.id)}>
+                              Close
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {!hasVoted ? (
+                        <div className="poll-options">
+                          {poll.options.map(opt => (
+                            <button
+                              key={opt.id}
+                              className="poll-option"
+                              onClick={() => vote(poll.id, opt.id)}
+                            >
+                              {opt.text}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="poll-results">
+                          {poll.options.map(opt => {
+                            const pct = percent(opt.votes, total);
+                            const isMine = votedOptionId === opt.id;
+                            return (
+                              <div key={opt.id} className="result-row">
+                                <div className="result-top">
+                                  <span className="result-label">{opt.text}</span>
+                                  <span className="result-pct">{pct}%</span>
+                                </div>
+                                <div className="progress">
+                                  <div className="progress__value" style={{ width: `${pct}%` }} />
+                                </div>
+                                <div className="result-votes">
+                                  {opt.votes} vote{opt.votes !== 1 ? 's' : ''} {isMine && <em>(you)</em>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Documents (host-upload + viewer) */}
+          {/* Documents (preloaded only; no uploads here) */}
           {activeTab === 'documents' && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Top bar for documents */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 16px',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111' }}>
-                  Documents
-                </h3>
-
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {isHost ? (
+            <div className="docs">
+              <div className="docs__bar">
+                <h3 className="docs__title">Documents</h3>
+                <div className="docs__actions">
+                  {activeDoc && (
                     <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.doc,.docx"
-                        multiple
-                        onChange={(e) => e.target.files && handleFiles(e.target.files)}
-                        style={{ display: 'none' }}
-                      />
-                      <button
-                        onClick={onClickUpload}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 8,
-                          padding: '8px 12px', borderRadius: 8,
-                          background: '#0e0e0e', color: '#fff', border: 'none',
-                          cursor: 'pointer', fontWeight: 600
-                        }}
-                        title="Upload documents (host only)"
+                      <a
+                        href={activeDoc.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="docs__btn docs__btn--open"
+                        title="Open in new tab"
                       >
-                        <Upload size={18} />
-                        Upload
-                      </button>
+                        Open
+                      </a>
+                      <a
+                        href={activeDoc.url}
+                        download={activeDoc.name}
+                        className="docs__btn docs__btn--download"
+                        title="Download"
+                      >
+                        Download
+                      </a>
                     </>
-                  ) : (
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>
-                      Only the host can upload documents
-                    </span>
                   )}
                 </div>
               </div>
 
-              {/* List of docs */}
-              <div style={{
-                display: 'flex',
-                gap: 8,
-                padding: '10px 12px',
-                overflowX: 'auto',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
+              <div className="docs__list">
                 {documents.length === 0 && (
-                  <div style={{ color: '#6b7280', fontSize: 14 }}>
-                    No documents yet. {isHost ? 'Click Upload to add PDF/images/docs.' : 'Waiting for host to upload.'}
-                  </div>
+                  <div className="docs__empty">No documents available.</div>
                 )}
-
                 {documents.map(doc => {
                   const active = doc.id === activeDocId;
                   return (
                     <div
                       key={doc.id}
                       onClick={() => setActiveDocId(doc.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        border: `1px solid ${active ? '#0e0e0e' : '#e5e7eb'}`,
-                        background: active ? '#f3f4f6' : '#fff',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
+                      className={`doc-pill ${active ? 'active' : ''}`}
                       title={doc.name}
                     >
                       <FileText size={16} />
-                      <span style={{ fontSize: 13, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {doc.name}
-                      </span>
-                      {isHost && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteDoc(doc.id); }}
-                          style={{
-                            marginLeft: 4, display: 'inline-flex', alignItems: 'center',
-                            border: 'none', background: 'transparent', cursor: 'pointer'
-                          }}
-                          title="Remove"
-                        >
-                          <Trash2 size={16} color="#dc2626" />
-                        </button>
-                      )}
+                      <span className="doc-pill__name">{doc.name}</span>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Viewer area */}
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <div style={{ position: 'absolute', inset: 0, padding: 16, overflow: 'auto' }}>
-                  {activeDoc ? (
-                    <>
-                      {isImage(activeDoc) && (
-                        <img
-                          src={activeDoc.url}
-                          alt={activeDoc.name}
-                          style={{ maxWidth: '100%', height: 'auto', borderRadius: 8 }}
-                        />
-                      )}
-
-                      {isPdf(activeDoc) && (
-                        <iframe
-                          title={activeDoc.name}
-                          src={activeDoc.url}
-                          style={{ width: '100%', height: '80vh', border: '1px solid #e5e7eb', borderRadius: 8 }}
-                        />
-                      )}
-
-                      {!isImage(activeDoc) && !isPdf(activeDoc) && (
-                        <div style={{
-                          background: '#f9fafb',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 8,
-                          padding: 16
-                        }}>
-                          <h4 style={{ marginTop: 0 }}>{activeDoc.name}</h4>
-                          <p style={{ color: '#6b7280' }}>
-                            Preview not supported. Download to open locally.
-                          </p>
-                          <a
-                            href={activeDoc.url}
-                            download={activeDoc.name}
-                            style={{
-                              display: 'inline-block',
-                              padding: '8px 12px',
-                              background: '#0e0e0e',
-                              color: '#fff',
-                              borderRadius: 8,
-                              textDecoration: 'none'
-                            }}
-                          >
-                            Download
-                          </a>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-                      <h1 style={{ fontSize: 34, fontWeight: 800, textAlign: 'center', marginBottom: 20, color: '#111' }}>
-                        What is Lorem Ipsum?
-                      </h1>
-                      <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px' }}>
-                        <strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the
-                        industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled
-                        it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic
-                        typesetting, remaining essentially unchanged. It was Lorem Ipsum passages, and more recently with desktop publishing
-                        software like Aldus PageMaker including versions of Lorem Ipsum.
-                      </p>
-
-                      <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', margin: '36px 0 12px', color: '#111' }}>
-                        Why do we use it?
-                      </h2>
-                      <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px' }}>
-                        It is a long established fact that a reader will be distracted by the readable content of a page when looking at its
-                        layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to
-                        using 'Content here, content here', making websites still in their infancy. Various versions have evolved over the
-                        years, sometimes by accident, sometimes on purpose (injected humour and the like).
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div className="docs__viewer">
+                {activeDoc ? (
+                  <>
+                    {isImage(activeDoc) && (
+                      <img src={activeDoc.url} alt={activeDoc.name} className="docs__img" />
+                    )}
+                    {isPdf(activeDoc) && (
+                      <iframe title={activeDoc.name} src={activeDoc.url} className="docs__iframe" />
+                    )}
+                    {!isImage(activeDoc) && !isPdf(activeDoc) && (
+                      <div className="docs__unsupported">
+                        This file type cannot be previewed here. Use Open to view in a new tab.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="docs__empty">Select a document from the list to view it here.</div>
+                )}
               </div>
             </div>
           )}
         </div>
-      </div>
+      </aside>
     </div>
   );
 }
