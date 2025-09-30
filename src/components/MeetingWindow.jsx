@@ -1,32 +1,45 @@
 // src/components/MeetingWindow.jsx
-import React, { useState } from 'react';
-import {
-  Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile
-} from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
+import {
+  Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, Trash2, Upload, FileText
+} from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 
-const MeetingWindow = () => {
+export default function MeetingWindow() {
   const navigate = useNavigate();
+
+  // Simulate role: set true for host-only controls
+  const [isHost] = useState(true);
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isHandRaised, setIsHandRaised] = useState(false);
+
   const [activeTab, setActiveTab] = useState('documents');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const [chatMessages, setChatMessages] = useState([
     { id: 1, user: 'John Doe', message: 'Hello everyone!', time: '10:30 AM' },
     { id: 2, user: 'Jane Smith', message: 'Great to be here', time: '10:31 AM' }
   ]);
   const [newMessage, setNewMessage] = useState('');
 
+  // Documents state
+  const [documents, setDocuments] = useState([]); // [{id, name, url, type, size}]
+  const [activeDocId, setActiveDocId] = useState(null);
+  const activeDoc = useMemo(
+    () => documents.find(d => d.id === activeDocId) || null,
+    [documents, activeDocId]
+  );
+  const fileInputRef = useRef(null);
+
   const participants = [
     { id: 1, name: 'Sarah Johnson', isMuted: false, isVideoOff: false },
-    { id: 2, name: 'Mike Chen', isMuted: true,  isVideoOff: false },
-    { id: 3, name: 'Alex Kumar', isMuted: false, isVideoOff: false },
-    { id: 4, name: 'Emily Davis', isMuted: true,  isVideoOff: false },
-    { id: 5, name: 'David Wilson', isMuted: true,  isVideoOff: true  },
+    { id: 2, name: 'Mike Chen',     isMuted: true,  isVideoOff: false },
+    { id: 3, name: 'Alex Kumar',    isMuted: false, isVideoOff: false },
+    { id: 4, name: 'Emily Davis',   isMuted: true,  isVideoOff: false },
+    { id: 5, name: 'David Wilson',  isMuted: true,  isVideoOff: true  },
     { id: 6, name: 'Lisa Anderson', isMuted: true,  isVideoOff: true  }
   ];
 
@@ -50,9 +63,41 @@ const MeetingWindow = () => {
 
   const handleEndCall = () => {
     if (window.confirm('End the call?')) {
-      navigate('/'); // go back to home; change if needed
+      navigate('/'); // go back to home
     }
   };
+
+  // File uploads (host only)
+  const handleFiles = (files) => {
+    const list = Array.from(files).map((f, idx) => ({
+      id: `${Date.now()}-${idx}`,
+      name: f.name,
+      url: URL.createObjectURL(f),
+      type: f.type || 'application/octet-stream',
+      size: f.size
+    }));
+    setDocuments(prev => {
+      const next = [...prev, ...list];
+      if (!activeDocId && next.length) setActiveDocId(next[0].id);
+      return next;
+    });
+  };
+
+  const onClickUpload = () => fileInputRef.current?.click();
+
+  const onDeleteDoc = (id) => {
+    setDocuments(prev => prev.filter(d => d.id !== id));
+    if (activeDocId === id) {
+      const remaining = documents.filter(d => d.id !== id);
+      setActiveDocId(remaining[0]?.id || null);
+    }
+  };
+
+  const isImage = (doc) => doc?.type.startsWith('image/');
+  const isPdf   = (doc) => (doc?.type === 'application/pdf') || /\.pdf$/i.test(doc?.name || '');
+
+  // 40% width for Documents panel
+  const rightWidth = activeTab === 'documents' ? '40%' : 430;
 
   return (
     <div style={{
@@ -79,22 +124,18 @@ const MeetingWindow = () => {
               gridTemplateColumns: 'repeat(2, 1fr)',
               gridTemplateRows: 'repeat(3, 1fr)',
               gap: 4,
-              padding: 0,
               backgroundColor: '#000'
             }}>
               {participants.map((p, idx) => (
-                <div
-                  key={p.id}
-                  style={{
-                    position: 'relative',
-                    backgroundColor: '#1a1a1a',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  {/* Fake video stream */}
+                <div key={p.id} style={{
+                  position: 'relative',
+                  backgroundColor: '#1a1a1a',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {/* Video placeholder */}
                   <div style={{
                     width: '100%',
                     height: '100%',
@@ -117,7 +158,7 @@ const MeetingWindow = () => {
                     )}
                   </div>
 
-                  {/* Mute badge bottom-left */}
+                  {/* Status + name bottom-left */}
                   <div style={{ position: 'absolute', bottom: 8, left: 8 }}>
                     <div style={{
                       width: 26, height: 26, borderRadius: 8,
@@ -128,7 +169,6 @@ const MeetingWindow = () => {
                     </div>
                   </div>
 
-                  {/* Name label */}
                   <div style={{ position: 'absolute', bottom: 8, left: 44 }}>
                     <span style={{
                       color: '#fff', fontSize: 14,
@@ -235,14 +275,15 @@ const MeetingWindow = () => {
         </div>
       </div>
 
-      {/* Right: Sidebar */}
+      {/* Right: Sidebar (40% when on Documents) */}
       <div style={{
-        width: 430,
+        width: rightWidth,
         backgroundColor: '#fff',
         display: 'flex',
         flexDirection: 'column',
         borderLeft: '1px solid #e5e7eb',
-        position: 'relative'
+        position: 'relative',
+        transition: 'width .25s ease'
       }}>
         {/* Centered pill tabs */}
         <div style={{
@@ -313,7 +354,7 @@ const MeetingWindow = () => {
                 ))}
               </div>
 
-              {/* Emoji picker (full) */}
+              {/* Full emoji picker */}
               {showEmojiPicker && (
                 <div style={{
                   position: 'absolute',
@@ -322,15 +363,17 @@ const MeetingWindow = () => {
                   zIndex: 20,
                   boxShadow: '0 20px 50px rgba(0,0,0,.25)',
                   borderRadius: 12,
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  background: '#fff'
                 }}>
-                  <Picker
-                    data={data}
-                    onEmojiSelect={(emoji) => setNewMessage(prev => prev + (emoji.native || ''))}
+                  <EmojiPicker
+                    onEmojiClick={(emojiData) => setNewMessage(prev => prev + emojiData.emoji)}
                     theme="light"
-                    previewPosition="none"
-                    searchPosition="none"
-                    skinTonePosition="none"
+                    searchDisabled={false}
+                    skinTonesDisabled={false}
+                    previewConfig={{ showPreview: false }}
+                    height={360}
+                    width={320}
                   />
                 </div>
               )}
@@ -420,44 +463,187 @@ const MeetingWindow = () => {
             </div>
           )}
 
-          {/* Documents */}
+          {/* Documents (host-upload + viewer) */}
           {activeTab === 'documents' && (
-            <div style={{ padding: '26px 22px 40px' }}>
-              <h1 style={{ fontSize: 34, fontWeight: 800, textAlign: 'center', marginBottom: 20, color: '#111' }}>
-                What is Lorem Ipsum?
-              </h1>
-              <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px', maxWidth: 640 }}>
-                <strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the
-                industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled
-                it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic
-                typesetting, remaining essentially unchanged. It was Lorem Ipsum passages, and more recently with desktop publishing
-                software like Aldus PageMaker including versions of Lorem Ipsum.
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {/* Top bar for documents */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111' }}>
+                  Documents
+                </h3>
 
-              <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', margin: '36px 0 12px', color: '#111' }}>
-                Why do we use it?
-              </h2>
-              <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px', maxWidth: 640 }}>
-                It is a long established fact that a reader will be distracted by the readable content of a page when looking at its
-                layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to
-                using 'Content here, content here', making websites still in their infancy. Various versions have evolved over the
-                years, sometimes by accident, sometimes on purpose (injected humour and the like).
-              </p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {isHost ? (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.doc,.docx"
+                        multiple
+                        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        onClick={onClickUpload}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '8px 12px', borderRadius: 8,
+                          background: '#0e0e0e', color: '#fff', border: 'none',
+                          cursor: 'pointer', fontWeight: 600
+                        }}
+                        title="Upload documents (host only)"
+                      >
+                        <Upload size={18} />
+                        Upload
+                      </button>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 13, color: '#6b7280' }}>
+                      Only the host can upload documents
+                    </span>
+                  )}
+                </div>
+              </div>
 
-              <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', margin: '36px 0 12px', color: '#111' }}>
-                Where does it come from?
-              </h2>
-              <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto', maxWidth: 640 }}>
-                Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin
-                literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney
-                College in Virginia, looked up one of the more obscure Latin words, consectetur...
-              </p>
+              {/* List of docs */}
+              <div style={{
+                display: 'flex',
+                gap: 8,
+                padding: '10px 12px',
+                overflowX: 'auto',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                {documents.length === 0 && (
+                  <div style={{ color: '#6b7280', fontSize: 14 }}>
+                    No documents yet. {isHost ? 'Click Upload to add PDF/images/docs.' : 'Waiting for host to upload.'}
+                  </div>
+                )}
+
+                {documents.map(doc => {
+                  const active = doc.id === activeDocId;
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => setActiveDocId(doc.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: `1px solid ${active ? '#0e0e0e' : '#e5e7eb'}`,
+                        background: active ? '#f3f4f6' : '#fff',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={doc.name}
+                    >
+                      <FileText size={16} />
+                      <span style={{ fontSize: 13, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {doc.name}
+                      </span>
+                      {isHost && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteDoc(doc.id); }}
+                          style={{
+                            marginLeft: 4, display: 'inline-flex', alignItems: 'center',
+                            border: 'none', background: 'transparent', cursor: 'pointer'
+                          }}
+                          title="Remove"
+                        >
+                          <Trash2 size={16} color="#dc2626" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Viewer area */}
+              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: 0, padding: 16, overflow: 'auto' }}>
+                  {activeDoc ? (
+                    <>
+                      {isImage(activeDoc) && (
+                        <img
+                          src={activeDoc.url}
+                          alt={activeDoc.name}
+                          style={{ maxWidth: '100%', height: 'auto', borderRadius: 8 }}
+                        />
+                      )}
+
+                      {isPdf(activeDoc) && (
+                        <iframe
+                          title={activeDoc.name}
+                          src={activeDoc.url}
+                          style={{ width: '100%', height: '80vh', border: '1px solid #e5e7eb', borderRadius: 8 }}
+                        />
+                      )}
+
+                      {!isImage(activeDoc) && !isPdf(activeDoc) && (
+                        <div style={{
+                          background: '#f9fafb',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: 8,
+                          padding: 16
+                        }}>
+                          <h4 style={{ marginTop: 0 }}>{activeDoc.name}</h4>
+                          <p style={{ color: '#6b7280' }}>
+                            Preview not supported. Download to open locally.
+                          </p>
+                          <a
+                            href={activeDoc.url}
+                            download={activeDoc.name}
+                            style={{
+                              display: 'inline-block',
+                              padding: '8px 12px',
+                              background: '#0e0e0e',
+                              color: '#fff',
+                              borderRadius: 8,
+                              textDecoration: 'none'
+                            }}
+                          >
+                            Download
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ maxWidth: 700, margin: '0 auto' }}>
+                      <h1 style={{ fontSize: 34, fontWeight: 800, textAlign: 'center', marginBottom: 20, color: '#111' }}>
+                        What is Lorem Ipsum?
+                      </h1>
+                      <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px' }}>
+                        <strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the
+                        industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled
+                        it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic
+                        typesetting, remaining essentially unchanged. It was Lorem Ipsum passages, and more recently with desktop publishing
+                        software like Aldus PageMaker including versions of Lorem Ipsum.
+                      </p>
+
+                      <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', margin: '36px 0 12px', color: '#111' }}>
+                        Why do we use it?
+                      </h2>
+                      <p style={{ fontSize: 15, lineHeight: 1.75, color: '#333', margin: '0 auto 24px' }}>
+                        It is a long established fact that a reader will be distracted by the readable content of a page when looking at its
+                        layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to
+                        using 'Content here, content here', making websites still in their infancy. Various versions have evolved over the
+                        years, sometimes by accident, sometimes on purpose (injected humour and the like).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default MeetingWindow;
+}
