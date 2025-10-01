@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import FeatureCarousel from './FeatureCarousel';
-import PillAccordion from './PillAccordion'; // NEW
+import PillAccordion from './PillAccordion';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -10,6 +10,10 @@ const LandingPage = () => {
 
   const handleSignUp = () => {
     navigate('/signup');
+  };
+
+  const handleJoinMeeting = () => {
+    navigate('/pre-meeting'); // Updated to go to pre-meeting setup
   };
 
   const handleSubmit = (e) => {
@@ -22,7 +26,6 @@ const LandingPage = () => {
     alert('Google Sign-in feature would be implemented here');
   };
 
-  // Items for the accordion
   const featureItems = [
     {
       title: 'Do i need an account to join the meeting?',
@@ -40,7 +43,6 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
-      {/* Header */}
       <nav className="landing-header">
         <div className="landing-nav-container">
           <span className="landing-brand">Rural Meet</span>
@@ -52,10 +54,8 @@ const LandingPage = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-container">
-          {/* Centered heading at top */}
           <div className="hero-header">
             <h1 className="hero-title">Elevate Your Meeting</h1>
             <p className="hero-subtitle">
@@ -64,7 +64,6 @@ const LandingPage = () => {
             </p>
           </div>
 
-          {/* Content below heading */}
           <div className="hero-content">
             <div className="hero-text">
               <div className="hero-features">
@@ -98,15 +97,12 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Feature Carousel Section */}
       <FeatureCarousel />
 
-      {/* Features Section (Accordion) */}
       <section id="features" className="features-accordion-section">
         <PillAccordion items={featureItems} />
       </section>
 
-      {/* Contact Section */}
       <section className="contact-section">
         <div className="contact-container">
           <h2 className="contact-title">Get in Touch</h2>
@@ -135,10 +131,30 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="landing-footer">
         <p>Copyright 2025</p>
       </footer>
+
+      <button
+        onClick={handleJoinMeeting}
+        style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 16,
+          zIndex: 2000,
+          padding: '12px 20px',
+          background: '#111',
+          color: '#fff',
+          borderRadius: 9999,
+          border: 'none',
+          boxShadow: '0 8px 20px rgba(0,0,0,.25)',
+          cursor: 'pointer',
+          fontWeight: 600,
+          fontSize: '14px'
+        }}
+      >
+        Join Meeting
+      </button>
     </div>
   );
 };

@@ -5,9 +5,13 @@
 
 /* Header */
 .landing-header {
-  background-color: white;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: rgba(255, 255, 255, 0.66);
+  border-bottom: 1px solid #373838;
   padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .landing-nav-container {
