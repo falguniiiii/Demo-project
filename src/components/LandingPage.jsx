@@ -46,7 +46,6 @@ const LandingPage = () => {
       {/* Header (sticky) */}
       <nav
         className="landing-header"
-        style={{ position: 'sticky', top: 0, zIndex: 1000, background: '#fff' }}
       >
         <div className="landing-nav-container">
           <span className="landing-brand">Rural Meet</span>
@@ -54,11 +53,6 @@ const LandingPage = () => {
             <button className="landing-nav-btn">Home</button>
             <button className="landing-nav-btn">About us</button>
             <button className="landing-nav-btn" onClick={handleSignUp}>Login</button>
-
-            {/* TEMP: Join Meeting button */}
-            <button className="landing-nav-btn" onClick={handleJoinMeeting}>
-              Join Meeting
-            </button>
           </div>
         </div>
       </nav>
