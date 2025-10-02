@@ -8,12 +8,16 @@ import './LandingPage.css';
 const LandingPage = () => {
   const navigate = useNavigate();
 
+  const handleLoginClick = () => {
+    navigate('/login'); // Navigate to login page
+  };
+
   const handleSignUp = () => {
-    navigate('/signup');
+    navigate('/login#signup'); // Navigate to login page in signup mode
   };
 
   const handleJoinMeeting = () => {
-    navigate('/pre-meeting'); // Updated to go to pre-meeting setup
+    navigate('/pre-meeting');
   };
 
   const handleSubmit = (e) => {
@@ -22,8 +26,7 @@ const LandingPage = () => {
   };
 
   const handleGoogleSignIn = () => {
-    console.log('Google Sign-in initiated');
-    alert('Google Sign-in feature would be implemented here');
+    navigate('/login'); // Can redirect to login for OAuth
   };
 
   const featureItems = [
@@ -49,7 +52,7 @@ const LandingPage = () => {
           <div className="landing-nav-links">
             <button className="landing-nav-btn">Home</button>
             <button className="landing-nav-btn">About us</button>
-            <button className="landing-nav-btn" onClick={handleSignUp}>Login</button>
+            <button className="landing-nav-btn" onClick={handleLoginClick}>Login</button>
           </div>
         </div>
       </nav>

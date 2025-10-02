@@ -2,19 +2,18 @@ import React, { useEffect, useState } from 'react';
 import './Login.css';
 import { FiUnlock, FiArrowLeft, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
-import {Link} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
-  // mode = 'login' | 'signup'
+  const navigate = useNavigate();
+  
   const [mode, setMode] = useState('login');
 
-  // form state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
 
-  // validation state
   const [errors, setErrors] = useState({
     fullName: '',
     email: '',
@@ -28,21 +27,17 @@ function Login() {
     confirmPass: false,
   });
 
-  // show/hide password toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Remember email checkbox
   const [remember, setRemember] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Open directly with #signup
   useEffect(() => {
     if (window.location.hash === '#signup') setMode('signup');
   }, []);
 
-  // Prefill email from localStorage (remember)
   useEffect(() => {
     const saved = localStorage.getItem('rememberEmail');
     if (saved) {
@@ -51,7 +46,6 @@ function Login() {
     }
   }, []);
 
-  // Keep URL hash in sync and reset errors on mode switch
   useEffect(() => {
     if (mode === 'signup') {
       window.location.hash = '#signup';
@@ -65,14 +59,13 @@ function Login() {
   }, [mode]);
 
   useEffect(() => {
-  const targetId = mode === 'signup' ? 'fullName' : 'email';
-  requestAnimationFrame(() => {
-    const el = document.getElementById(targetId);
-    if (el) el.focus();
-  });
-}, [mode]);
+    const targetId = mode === 'signup' ? 'fullName' : 'email';
+    requestAnimationFrame(() => {
+      const el = document.getElementById(targetId);
+      if (el) el.focus();
+    });
+  }, [mode]);
 
-  // helpers
   const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val.trim());
 
   const validateOne = (name, value) => {
@@ -140,7 +133,6 @@ function Login() {
     return { valid, firstErrorKey };
   };
 
-  // Derived validity for disabling the Submit button
   const isFormValid =
     mode === 'signup'
       ? Boolean(fullName.trim()) &&
@@ -150,35 +142,37 @@ function Login() {
       : isValidEmail(email) && password.length >= 8;
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  const { valid, firstErrorKey } = validateAll();
-  if (!valid) {
-    const el = document.getElementById(firstErrorKey || 'email');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-
-  setSubmitting(true);
-  try {
-    // remember email preference
-    if (remember) localStorage.setItem('rememberEmail', email);
-    else localStorage.removeItem('rememberEmail');
-
-    // Simulate a network call (optional)
-    await new Promise(r => setTimeout(r, 600));
-
-    if (mode === 'signup') {
-      alert(`Sign‑up: ${fullName} • ${email}`);
-    } else {
-      alert(`Login: ${email}`);
+    e.preventDefault();
+    const { valid, firstErrorKey } = validateAll();
+    if (!valid) {
+      const el = document.getElementById(firstErrorKey || 'email');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+
+    setSubmitting(true);
+    try {
+      if (remember) localStorage.setItem('rememberEmail', email);
+      else localStorage.removeItem('rememberEmail');
+
+      await new Promise(r => setTimeout(r, 600));
+
+      if (mode === 'signup') {
+        alert(`Sign‑up successful: ${fullName} • ${email}`);
+        navigate('/pre-meeting', { state: { userName: fullName } });
+      } else {
+        alert(`Login successful: ${email}`);
+        navigate('/pre-meeting');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleGoogle = () => {
     alert(mode === 'signup' ? 'Sign up with Google' : 'Continue with Google');
+    // After Google OAuth, navigate to pre-meeting
+    // navigate('/pre-meeting', { state: { userName: 'Google User Name' } });
   };
 
   const onBlurField = (name, value) => {
@@ -186,15 +180,18 @@ function Login() {
     validateOne(name, value);
   };
 
+  const handleBackClick = () => {
+    navigate('/');
+  };
+
   return (
     <div className="login-page">
-      {/* Top bar */}
       <header className="topbar">
         <div className="left-group">
           <button
             type="button"
             className="back-btn"
-            onClick={() => window.history.back()}
+            onClick={handleBackClick}
             aria-label="Go back"
             title="Go back"
           >
@@ -204,8 +201,8 @@ function Login() {
         </div>
 
         <nav className="nav-pills">
-          <a className="pill" href="#">Home</a>
-          <a className="pill" href="/host">Host Section</a>
+          <a className="pill" href="/">Home</a>
+          <a className="pill" href="/#features">Features</a>
           <button
             type="button"
             className={`pill ${mode === 'signup' ? 'active' : ''}`}
@@ -216,210 +213,199 @@ function Login() {
         </nav>
       </header>
 
-      {/* Panels */}
       <div className="panels">
-        {/* Left panel (form) */}
         <section className="panel panel-left">
-  <div className="panel-inner">
-    <div className="title-wrap">
-      <h1 className="title">
-        {mode === 'login' ? 'Already have an account?' : 'Welcome! Create your Rural Meet account'}
-      </h1>
-      <p className="subtitle italic">
-        {mode === 'login'
-          ? 'Login easily with few simple steps.'
-          : 'Connect with students, teams and clients quickly'}
-      </p>
-    </div>
+          <div className="panel-inner">
+            <div className="title-wrap">
+              <h1 className="title">
+                {mode === 'login' ? 'Already have an account?' : 'Welcome! Create your Rural Meet account'}
+              </h1>
+              <p className="subtitle italic">
+                {mode === 'login'
+                  ? 'Login easily with few simple steps.'
+                  : 'Connect with students, teams and clients quickly'}
+              </p>
+            </div>
 
-    {/* Profile avatar */}
-    <div className="avatar" role="img" aria-label="Profile">
-      <FiUser className="avatar-icon" />
-    </div>
+            <div className="avatar" role="img" aria-label="Profile">
+              <FiUser className="avatar-icon" />
+            </div>
 
-    {/* IMPORTANT: form opens here and closes before switch-auth */}
-    <form onSubmit={handleSubmit} className="form-wrap" noValidate autoComplete="off">
-      {mode === 'signup' && (
-        <div className="input-group">
-          <input
-            id="fullName"
-            type="text"
-            placeholder="Full name"
-            value={fullName}
-            onChange={(e) => {
-              setFullName(e.target.value);
-              if (touched.fullName) validateOne('fullName', e.target.value);
-            }}
-            onBlur={(e) => onBlurField('fullName', e.target.value)}
-            className={errors.fullName && touched.fullName ? 'input-error' : ''}
-            aria-invalid={!!errors.fullName}
-            aria-describedby="fullName-error"
-            required={mode === 'signup'}
-          />
-          {errors.fullName && touched.fullName && (
-            <p id="fullName-error" className="error-text">{errors.fullName}</p>
-          )}
-        </div>
-      )}
+            <form onSubmit={handleSubmit} className="form-wrap" noValidate autoComplete="off">
+              {mode === 'signup' && (
+                <div className="input-group">
+                  <input
+                    id="fullName"
+                    type="text"
+                    placeholder="Full name"
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (touched.fullName) validateOne('fullName', e.target.value);
+                    }}
+                    onBlur={(e) => onBlurField('fullName', e.target.value)}
+                    className={errors.fullName && touched.fullName ? 'input-error' : ''}
+                    aria-invalid={!!errors.fullName}
+                    aria-describedby="fullName-error"
+                    required={mode === 'signup'}
+                  />
+                  {errors.fullName && touched.fullName && (
+                    <p id="fullName-error" className="error-text">{errors.fullName}</p>
+                  )}
+                </div>
+              )}
 
-      <div className="input-group">
-        <input
-          id="email"
-          type="email"
-          placeholder="name@gmail.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            if (touched.email) validateOne('email', e.target.value);
-          }}
-          onBlur={(e) => onBlurField('email', e.target.value)}
-          className={errors.email && touched.email ? 'input-error' : ''}
-          aria-invalid={!!errors.email}
-          aria-describedby="email-error"
-          required
-          autoFocus
-        />
-        {errors.email && touched.email && (
-          <p id="email-error" className="error-text">{errors.email}</p>
-        )}
-      </div>
+              <div className="input-group">
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="name@gmail.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (touched.email) validateOne('email', e.target.value);
+                  }}
+                  onBlur={(e) => onBlurField('email', e.target.value)}
+                  className={errors.email && touched.email ? 'input-error' : ''}
+                  aria-invalid={!!errors.email}
+                  aria-describedby="email-error"
+                  required
+                  autoFocus
+                />
+                {errors.email && touched.email && (
+                  <p id="email-error" className="error-text">{errors.email}</p>
+                )}
+              </div>
 
-      {/* Password with show/hide */}
-      <div className="input-group has-toggle">
-        <input
-          id="password"
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            if (touched.password) validateOne('password', e.target.value);
-            if (mode === 'signup' && touched.confirmPass) validateOne('confirmPass', confirmPass);
-          }}
-          onBlur={(e) => onBlurField('password', e.target.value)}
-          className={errors.password && touched.password ? 'input-error' : ''}
-          aria-invalid={!!errors.password}
-          aria-describedby="password-error"
-          required
-        />
+              <div className="input-group has-toggle">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (touched.password) validateOne('password', e.target.value);
+                    if (mode === 'signup' && touched.confirmPass) validateOne('confirmPass', confirmPass);
+                  }}
+                  onBlur={(e) => onBlurField('password', e.target.value)}
+                  className={errors.password && touched.password ? 'input-error' : ''}
+                  aria-invalid={!!errors.password}
+                  aria-describedby="password-error"
+                  required
+                />
 
-        <button
-          type="button"
-          className="toggle-visibility"
-          onClick={() => setShowPassword((s) => !s)}
-          aria-label={showPassword ? 'Hide password' : 'Show password'}
-          title={showPassword ? 'Hide password' : 'Show password'}
-        >
-          {showPassword ? <FiEyeOff /> : <FiEye />}
-        </button>
+                <button
+                  type="button"
+                  className="toggle-visibility"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
 
-        {errors.password && touched.password && (
-          <p id="password-error" className="error-text">{errors.password}</p>
-        )}
-      </div>
+                {errors.password && touched.password && (
+                  <p id="password-error" className="error-text">{errors.password}</p>
+                )}
+              </div>
 
-      {/* Confirm password (signup only) with show/hide */}
-      {mode === 'signup' && (
-        <div className="input-group has-toggle">
-          <input
-            id="confirmPass"
-            type={showConfirm ? 'text' : 'password'}
-            placeholder="Confirm password"
-            value={confirmPass}
-            onChange={(e) => {
-              setConfirmPass(e.target.value);
-              if (touched.confirmPass) validateOne('confirmPass', e.target.value);
-            }}
-            onBlur={(e) => onBlurField('confirmPass', e.target.value)}
-            className={errors.confirmPass && touched.confirmPass ? 'input-error' : ''}
-            aria-invalid={!!errors.confirmPass}
-            aria-describedby="confirmPass-error"
-            required={mode === 'signup'}
-          />
+              {mode === 'signup' && (
+                <div className="input-group has-toggle">
+                  <input
+                    id="confirmPass"
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="Confirm password"
+                    value={confirmPass}
+                    onChange={(e) => {
+                      setConfirmPass(e.target.value);
+                      if (touched.confirmPass) validateOne('confirmPass', e.target.value);
+                    }}
+                    onBlur={(e) => onBlurField('confirmPass', e.target.value)}
+                    className={errors.confirmPass && touched.confirmPass ? 'input-error' : ''}
+                    aria-invalid={!!errors.confirmPass}
+                    aria-describedby="confirmPass-error"
+                    required={mode === 'signup'}
+                  />
 
-          <button
-            type="button"
-            className="toggle-visibility"
-            onClick={() => setShowConfirm((s) => !s)}
-            aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
-            title={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
-          >
-            {showConfirm ? <FiEyeOff /> : <FiEye />}
-          </button>
+                  <button
+                    type="button"
+                    className="toggle-visibility"
+                    onClick={() => setShowConfirm((s) => !s)}
+                    aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                    title={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                  >
+                    {showConfirm ? <FiEyeOff /> : <FiEye />}
+                  </button>
 
-          {errors.confirmPass && touched.confirmPass && (
-            <p id="confirmPass-error" className="error-text">{errors.confirmPass}</p>
-          )}
-        </div>
-      )}
+                  {errors.confirmPass && touched.confirmPass && (
+                    <p id="confirmPass-error" className="error-text">{errors.confirmPass}</p>
+                  )}
+                </div>
+              )}
 
-      {/* Remember email row */}
-      <div className="row-between remember-row">
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-          />
-          Remember my email on this device
-        </label>
-      </div>
+              <div className="row-between remember-row">
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                  />
+                  Remember my email on this device
+                </label>
+              </div>
 
-      {/* Submit button stays inside the form */}
-      <button type="submit" className="submit-btn" disabled={!isFormValid || submitting}>
-        {submitting ? (
-          <>
-           <span className="btn-spinner" aria-hidden="true"></span>
-           Please wait…
-          </>
+              <button type="submit" className="submit-btn" disabled={!isFormValid || submitting}>
+                {submitting ? (
+                  <>
+                    <span className="btn-spinner" aria-hidden="true"></span>
+                    Please wait…
+                  </>
+                ) : (
+                  mode === 'login' ? 'Submit' : 'Create account'
+                )}
+              </button>
+            </form>
 
-        ) : (
-         mode === 'login' ? 'Submit' : 'Create account'
-         )}
-      </button>
-    </form>
-    {/* IMPORTANT: form closes above */}
+            <div className="switch-auth">
+              {mode === 'login' ? (
+                <>
+                  New here?{' '}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => setMode('signup')}
+                  >
+                    Create an account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => setMode('login')}
+                  >
+                    Log in
+                  </button>
+                </>
+              )}
+            </div>
 
-    <div className="switch-auth">
-      {mode === 'login' ? (
-        <>
-          New here?{' '}
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => setMode('signup')}
-          >
-            Create an account
-          </button>
-        </>
-      ) : (
-        <>
-          Already have an account?{' '}
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => setMode('login')}
-          >
-            Log in
-          </button>
-        </>
-      )}
-    </div>
+            <div className="divider-OR">
+              <span>OR</span>
+            </div>
 
-    <div className="divider-OR">
-      <span>OR</span>
-    </div>
+            <div className="google-row">
+              <button type="button" className="google-btn" onClick={handleGoogle} disabled={submitting}>
+                <FcGoogle size={20} />
+                {mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}
+              </button>
+            </div>
+          </div>
+        </section>
 
-    <div className="google-row">
-      <button type="button" className="google-btn" onClick={handleGoogle} disabled={submitting}>
-        <FcGoogle size={20} />
-        {mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}
-      </button>
-    </div>
-  </div>
-</section>
-
-        {/* Right panel (illustration) */}
         <aside className="panel panel-right">
           <FiUnlock className="lock-icon" />
         </aside>
