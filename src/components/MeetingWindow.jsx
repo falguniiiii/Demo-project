@@ -1,4 +1,3 @@
-// src/components/MeetingWindow.jsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -147,49 +146,87 @@ export default function MeetingWindow() {
   const streamRef = useRef(null);
   const [mediaError, setMediaError] = useState('');
 
-  const stopStream = (s) => {
-    try { s.getTracks().forEach(t => t.stop()); } catch {}
+  const stopAllTracks = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (selfVideoRef.current) {
+      selfVideoRef.current.srcObject = null;
+    }
   };
 
-  const ensureMedia = async () => {
+  const manageMediaTracks = async () => {
     try {
+      console.log('🎥 manageMediaTracks called', { isMicOn, isVideoOn });
       setMediaError('');
       
+      // Stop all existing tracks first
+      if (streamRef.current) {
+        console.log('🛑 Stopping existing tracks');
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
+      // If both are off, just clear everything
       if (!isMicOn && !isVideoOn) {
-        if (streamRef.current) {
-          stopStream(streamRef.current);
-          streamRef.current = null;
+        console.log('❌ Both off, clearing video');
+        if (selfVideoRef.current) {
+          selfVideoRef.current.srcObject = null;
         }
-        if (selfVideoRef.current) selfVideoRef.current.srcObject = null;
         return;
       }
 
+      // Request only the tracks we need
       const constraints = {};
-      if (isMicOn) constraints.audio = true;
-      if (isVideoOn) constraints.video = { width: { ideal: 1280 }, height: { ideal: 720 } };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (streamRef.current) stopStream(streamRef.current);
-      streamRef.current = stream;
-      
-      if (selfVideoRef.current && isVideoOn) {
-        selfVideoRef.current.srcObject = stream;
-        selfVideoRef.current.muted = true;
-      } else if (selfVideoRef.current) {
-        selfVideoRef.current.srcObject = null;
+      if (isMicOn) {
+        constraints.audio = true;
       }
+      if (isVideoOn) {
+        constraints.video = { 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 },
+          facingMode: 'user'
+        };
+      }
+
+      console.log('📞 Requesting media with constraints:', constraints);
+      
+      // Get new stream with required tracks
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      console.log('✅ Got stream with tracks:', stream.getTracks().map(t => t.kind));
+
+      // Update video element if video is on
+      if (selfVideoRef.current) {
+        if (isVideoOn) {
+          console.log('🎬 Setting video srcObject');
+          selfVideoRef.current.srcObject = stream;
+          selfVideoRef.current.muted = true;
+        } else {
+          selfVideoRef.current.srcObject = null;
+        }
+      } else {
+        console.log('⚠️ selfVideoRef.current is null!');
+      }
+
     } catch (e) {
-      console.error('Media error:', e);
+      console.error('❌ Media error:', e);
       setMediaError(e?.message || 'Could not access camera/microphone');
     }
   };
 
+  // Initial setup
   useEffect(() => {
-    ensureMedia();
+    manageMediaTracks();
     return () => {
-      if (streamRef.current) stopStream(streamRef.current);
+      stopAllTracks();
     };
+  }, []);
+
+  // Update when mic or video toggles
+  useEffect(() => {
+    manageMediaTracks();
   }, [isMicOn, isVideoOn]);
 
   const onToggleMic = () => {
@@ -202,7 +239,7 @@ export default function MeetingWindow() {
 
   const handleEndCall = () => {
     if (window.confirm('End the call?')) {
-      if (streamRef.current) stopStream(streamRef.current);
+      stopAllTracks();
       navigate('/');
     }
   };
@@ -245,7 +282,7 @@ export default function MeetingWindow() {
   const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47'];
   const gradsTo = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C'];
 
-  const hasLocalVideo = () => isVideoOn && streamRef.current && streamRef.current.getVideoTracks().some(t => t.enabled);
+  const hasLocalVideo = () => isVideoOn && streamRef.current && streamRef.current.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
 
   function handleSend() {
     const trimmed = newMessage.trim();
@@ -284,7 +321,7 @@ export default function MeetingWindow() {
                           : `linear-gradient(135deg, ${gradsFrom[idx % gradsFrom.length]} 20%, ${gradsTo[idx % gradsTo.length]} 80%)`
                       }}
                     >
-                      {isLocal && hasLocalVideo() && (
+                      {isLocal && isVideoOn && (
                         <video
                           ref={selfVideoRef}
                           autoPlay
