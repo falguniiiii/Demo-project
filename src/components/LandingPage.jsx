@@ -161,7 +161,7 @@ const LandingPage = () => {
       </button>
 
       {/* temp btn-1 */}
-      <button onClick={() => navigate('/upload-documents')} 
+      <button onClick={() => navigate('/upload')} 
        style={{
           position: 'fixed',
           right: 16,
