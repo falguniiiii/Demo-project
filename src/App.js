@@ -8,6 +8,9 @@ import Login from './components/Login';
 import './App.css';
 
 
+
+
+
 function App() {
   return (
     <Router>
@@ -17,6 +20,9 @@ function App() {
           <Route path="/meeting" element={<MeetingWindow />} />
           <Route path="/pre-meeting" element={<PreMeetingSetup />} />
           <Route path="/Login" element={<Login />} />
+          <Route path="/meeting" element={<MeetingWindow />} />
+          <Route path="/pre-meeting" element={<PreMeetingSetup />} />
+         
         </Routes>
       </div>
     </Router>
