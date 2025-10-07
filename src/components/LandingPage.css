@@ -100,7 +100,7 @@
 .hero-text{
   width: 100%;
   max-width: 600px;
-  height: 350px;
+  height: 380px;
   overflow: hidden;
   margin-left: 4rem;
   border: 1.5px solid #f3f5e7;
@@ -164,7 +164,7 @@
 
 .meeting-illustration {
   width: 600px;
-  height: 350px;
+  height: 380px;
   background: white;
   overflow: hidden;
   margin-right: 3rem;
