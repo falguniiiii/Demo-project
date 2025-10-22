@@ -159,10 +159,10 @@ function Login() {
 
       if (mode === 'signup') {
         alert(`Sign‑up successful: ${fullName} • ${email}`);
-        navigate('/pre-meeting', { state: { userName: fullName } });
+        navigate('/host', { state: { userName: fullName } });
       } else {
         alert(`Login successful: ${email}`);
-        navigate('/pre-meeting');
+        navigate('/host');
       }
     } finally {
       setSubmitting(false);
@@ -171,8 +171,8 @@ function Login() {
 
   const handleGoogle = () => {
     alert(mode === 'signup' ? 'Sign up with Google' : 'Continue with Google');
-    // After Google OAuth, navigate to pre-meeting
-    // navigate('/pre-meeting', { state: { userName: 'Google User Name' } });
+    // After Google OAuth, navigate to host
+    // navigate('/host', { state: { userName: 'Google User Name' } });
   };
 
   const onBlurField = (name, value) => {
