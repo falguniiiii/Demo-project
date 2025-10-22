@@ -138,6 +138,7 @@ const LandingPage = () => {
         <p>Copyright 2025</p>
       </footer>
 
+      {/* tem btn-0 */}
       <button
         onClick={handleJoinMeeting}
         style={{
@@ -158,6 +159,26 @@ const LandingPage = () => {
       >
         Join Meeting
       </button>
+
+      {/* temp btn-1 */}
+      <button onClick={() => navigate('/upload')} 
+       style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 90,
+          zIndex: 2000,
+          padding: '12px 20px',
+          background: '#111',
+          color: '#fff',
+          borderRadius: 9999,
+          border: 'none',
+          boxShadow: '0 8px 20px rgba(0,0,0,.25)',
+          cursor: 'pointer',
+          fontWeight: 600,
+          fontSize: '14px'
+        }} className="get-started-btn">
+  Get started →
+</button>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-// src/components/PreMeetingSetup.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
@@ -15,63 +14,87 @@ const PreMeetingSetup = () => {
   const [mediaError, setMediaError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initial mount - don't auto-start camera
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopStream();
+      stopAllTracks();
     };
   }, []);
 
-  // Handle video toggle
+  // Handle media changes when mic or video toggle
   useEffect(() => {
-    if (isVideoOn) {
-      startPreview();
-    } else {
-      stopStream();
-    }
-  }, [isVideoOn]);
+    manageMedia();
+  }, [isMicOn, isVideoOn]);
 
-  const startPreview = async () => {
+ const stopAllTracks = () => {
     if (streamRef.current) {
-      return; // Already have a stream
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
+  };
 
+  const manageMedia = async () => {
     try {
-      setIsLoading(true);
+      console.log('🎥 PreMeeting manageMedia called', { isMicOn, isVideoOn });
       setMediaError('');
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { 
+
+      // Stop all existing tracks first
+      if (streamRef.current) {
+        console.log('🛑 Stopping existing tracks');
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
+      // If both are off, just clear everything
+      if (!isMicOn && !isVideoOn) {
+        console.log('❌ Both off, clearing video');
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      // Request only the tracks we need
+      const constraints = {};
+      if (isMicOn) {
+        constraints.audio = true;
+      }
+      if (isVideoOn) {
+        constraints.video = { 
           width: { ideal: 1280 }, 
           height: { ideal: 720 },
           facingMode: 'user'
-        }
-      });
-      
+        };
+      }
+
+      console.log('📞 Requesting media with constraints:', constraints);
+
+      // Get new stream with required tracks
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      console.log('✅ Got stream with tracks:', stream.getTracks().map(t => t.kind));
+
+      // Update video element if video is on
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        if (isVideoOn) {
+          console.log('🎬 Setting video srcObject');
+          videoRef.current.srcObject = stream;
+        } else {
+          videoRef.current.srcObject = null;
+        }
+      } else {
+        console.log('⚠️ videoRef.current is null!');
       }
       
       setIsLoading(false);
     } catch (error) {
-      console.error('Media error:', error);
-      setMediaError('Unable to access camera. Please check permissions.');
+      console.error('❌ Media error:', error);
+      setMediaError('Unable to access camera/microphone. Please check permissions.');
       setIsLoading(false);
-    }
-  };
-
-  const stopStream = () => {
-    if (streamRef.current) {
-      // Stop all tracks
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+      stopAllTracks();
     }
   };
 
@@ -81,7 +104,7 @@ const PreMeetingSetup = () => {
       return;
     }
     
-    stopStream();
+    stopAllTracks();
     navigate('/meeting', {
       state: {
         userName: userName.trim(),
@@ -102,29 +125,33 @@ const PreMeetingSetup = () => {
           {isLoading && (
             <div className="pre-meeting__loading">
               <div className="spinner"></div>
-              <p>Loading camera...</p>
+              <p>Loading media...</p>
             </div>
           )}
           
-          {!isLoading && isVideoOn && !mediaError ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="pre-meeting__video"
-            />
-          ) : !isLoading && (
-            <div className="pre-meeting__avatar">
-              <div className="avatar-circle">
-                {userName ? userName.charAt(0).toUpperCase() : '?'}
-              </div>
-              {!isVideoOn && <p className="camera-off-text">Camera is off</p>}
-            </div>
-          )}
-          
-          {mediaError && (
-            <div className="pre-meeting__error">{mediaError}</div>
+          {!isLoading && (
+            <>
+              {isVideoOn && !mediaError ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="pre-meeting__video"
+                />
+              ) : (
+                <div className="pre-meeting__avatar">
+                  <div className="avatar-circle">
+                    {userName ? userName.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  {!isVideoOn && <p className="camera-off-text">Camera is off</p>}
+                </div>
+              )}
+              
+              {mediaError && (
+                <div className="pre-meeting__error">{mediaError}</div>
+              )}
+            </>
           )}
         </div>
 
@@ -166,7 +193,7 @@ const PreMeetingSetup = () => {
         </button>
 
         <button
-          onClick={() => { stopStream(); navigate('/'); }}
+          onClick={() => { stopAllTracks(); navigate('/'); }}
           className="pre-meeting__cancel"
           disabled={isLoading}
         >
