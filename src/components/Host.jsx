@@ -100,8 +100,8 @@ export default function Host() {
               <button className="dropdown-btn" onClick={() => alert('View Profile')}>
                 View Profile
               </button>
-              <button className="dropdown-btn" onClick={() => alert('About Us')}>
-                About Us
+              <button className="dropdown-btn" onClick={() => alert('My Recordings')}>
+                My Recordings
               </button>
               <button className="dropdown-btn logout-btn" onClick={handleLogout}>
                 Logout
