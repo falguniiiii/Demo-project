@@ -116,7 +116,7 @@ export default function Host() {
         {/* Left rail */}
         <aside className="side-rail">
           <button className="pill strong">
-            Host Section <span className="emoji">😊</span>
+            Host Section <FiChevronRight />
           </button>
 
           <button className="pill outline">

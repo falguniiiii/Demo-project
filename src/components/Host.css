@@ -165,15 +165,16 @@
 }
 
 .pill {
+  width: 220px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-radius: 50px;
-  border: 2px solid transparent;
+  padding: 0.85rem 1.2rem;
+  border-radius: 20px;
+  border: 1.2px solid transparent;
   background: transparent;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
@@ -199,10 +200,6 @@
   background: #f9fafb;
   border-color: #9ca3af;
   transform: translateX(5px);
-}
-
-.emoji {
-  margin-left: 0.5rem;
 }
 
 /* Vertical divider */
