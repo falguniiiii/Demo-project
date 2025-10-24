@@ -311,8 +311,8 @@
 }
 
 .round-plus {
-  width: 60px;
-  height: 60px;
+  width: 55px;
+  height: 55px;
   border-radius: 50%;
   border: 2px solid #d1d5db;
   background: white;
@@ -334,8 +334,8 @@
 
 /* Toggle Switch */
 .toggle {
-  width: 100px;
-  height: 50px;
+  width: 90px;
+  height: 40px;
   border-radius: 25px;
   background: #a9abac;
   border: none;
@@ -351,8 +351,8 @@
 }
 
 .knob {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: white;
   display: block;
@@ -382,7 +382,7 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1.5rem;
-  background: linear-gradient(180deg, rgba(235,238,255,0.6) 0%, rgba(246,250,236,0.6) 100%);
+  /* background: linear-gradient(180deg, rgba(235,238,255,0.6) 0%, rgba(246,250,236,0.6) 100%); */
   padding: 2rem;
   border-radius: 16px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
