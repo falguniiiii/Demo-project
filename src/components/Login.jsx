@@ -197,7 +197,7 @@ function Login() {
           >
             <FiArrowLeft />
           </button>
-          <h1 className="brand brand--xl">Rural Meet</h1>
+          <span className="landing-brand">Rural Meet</span>
         </div>
 
         <nav className="nav-pills">

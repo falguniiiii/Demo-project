@@ -19,7 +19,7 @@
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding: 6px 14px;                 /* compact height */
+  padding: 6px 14px;                 /*compact height*/
   border-bottom:1px solid #eaeaea;
   background:#fff;
 }
@@ -51,8 +51,9 @@
 .topbar .brand,
 .topbar .brand.brand--xl{
   margin:0;
-  font-weight:600;
-  font-size: clamp(26px, 3.8vw, 38px);   /* adjust if you want larger/smaller */
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: black;
   line-height:1.05;
   letter-spacing:.2px;
 }

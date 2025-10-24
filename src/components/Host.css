@@ -14,9 +14,10 @@
 /* ===== TOP BAR ===== */
 .topbar {
   display: flex;
+  top:0;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
+  padding: 9px 14px;                 /*compact height*/
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -47,8 +48,8 @@
 
 .brand {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: bold;
+  color: black;
 }
 
 .right-icons {
@@ -251,7 +252,7 @@
 
 /* ===== MEETING CARD WITH IMAGE ===== */
 .meeting-card {
-  background:linear-gradient(180deg, #dcdafe 0%, #eef2d9 100%);
+  background: linear-gradient(to bottom right, #d7d9fa, #f3f5e7);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   margin-bottom: 3rem;

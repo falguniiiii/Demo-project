@@ -69,7 +69,7 @@ export default function Host() {
           >
             <FiArrowLeft />
           </button>
-          <h1 className="brand brand--xl">Rural Meet</h1>
+          <span className="landing-brand">Rural Meet</span>
         </div>
 
         <div className="right-icons">
