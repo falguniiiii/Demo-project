@@ -21,7 +21,7 @@ export default function Host() {
   const [showProfile, setShowProfile] = useState(false);
   const [enableWaitingRoom, setEnableWaitingRoom] = useState(true);
   const [allowScreenShare, setAllowScreenShare] = useState(false);
-  const [recordMeeting, setRecordMeeting] = useState(true);
+  const [recordMeeting, setRecordMeeting] = useState(false);
   const [autoCaptions, setAutoCaptions] = useState(false);
 
   const handleLogout = () => {
@@ -123,10 +123,6 @@ export default function Host() {
             Participant Section <FiChevronRight />
           </button>
         </aside>
-
-        {/* Vertical divider */}
-        <div className="divider-vert" aria-hidden="true" />
-
         {/* Main panel */}
         <main className="stage">
           <section className="panel hero">

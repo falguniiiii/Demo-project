@@ -22,6 +22,7 @@
   padding: 6px 14px;                 /*compact height*/
   border-bottom:1px solid #eaeaea;
   background:#fff;
+  gap: 20px;
 }
 
 .left-group{
@@ -59,21 +60,35 @@
 }
 
 /* Nav pills (Home / About / Login-Signup toggle) */
-.nav-pills{ display:flex; gap:12px; }
-.nav-pills .pill{
-  display:inline-flex;
-  align-items:center;
-  padding:6px 12px;
-  background:#000000;
-  color:#fff;
-  border-radius:9999px;
-  font-weight:600;
-  font-size:15px;
-  border:none;
-  cursor:pointer;
-  text-decoration: none;
+.nav-pills{ 
+  display:flex !important; 
+  gap:10px !important;
+  flex-shrink: 0 !important;
+  width: auto !important;
+  max-width: max-content !important;
 }
-.nav-pills .pill.active{ background:#000; }
+.nav-pills .pill{
+  display:inline-flex !important;
+  align-items:center !important;
+  padding:7px 18px !important;
+  background:#000000 !important;
+  color:#fff !important;
+  border-radius:9999px !important;
+  font-weight:600 !important;
+  font-size:14px !important;
+  border:none !important;
+  cursor:pointer !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  transition: background .2s, transform .05s !important;
+  flex-shrink: 0 !important;
+  width: auto !important;
+  min-width: auto !important;
+  max-width: max-content !important;
+}
+.nav-pills .pill:hover{ background:#2b2b2b !important; }
+.nav-pills .pill:active{ transform: translateY(1px) !important; }
+.nav-pills .pill.active{ background:#000 !important; }
 
 /* ========== Panels ========== */
 .panels{
@@ -339,12 +354,6 @@
 }
 .checkbox { display: inline-flex; align-items: center; gap: 8px; }
 .small { font-size: 13px; }
-
-.submit-btn:disabled,
-.google-btn:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
 
 /* Small inline spinner used inside the submit button */
 .btn-spinner {
