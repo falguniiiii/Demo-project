@@ -69,23 +69,23 @@
 .hero-header {
   text-align: center;
   margin-bottom: 6rem;
-  max-width: 800px;
+  max-width: 700px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .hero-title {
   font-size: 4rem;
-  font-weight: bold;
+  font-weight: medium;
   color: black;
   margin-bottom: 1rem;
   line-height: 1.2;
 }
 
 .hero-subtitle {
-  font-size: 1.5rem;
-  color: #6a5e79;
-  line-height: 1.6;
+  font-size: 1.3rem !important;
+  color: #000000;
+  line-height: 1.4;
 }
 
 /* Content below (text + image) */
@@ -99,6 +99,7 @@
 .hero-text{
   width: 100%;
   max-width: 600px;
+  font-weight: medium;
   height: 380px;
   overflow: hidden;
   margin-left: 4rem;
