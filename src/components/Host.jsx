@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Host.css';
 import {
   FiArrowLeft,
@@ -17,6 +18,7 @@ const posterImg =
   "https://framerusercontent.com/images/w5JvkUHefjGZcnDK7kHpmrMOk.png?width=1024&height=1024";
 
 export default function Host() {
+  const navigate = useNavigate();
   const [toggleOn, setToggleOn] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [enableWaitingRoom, setEnableWaitingRoom] = useState(true);
@@ -48,7 +50,7 @@ export default function Host() {
   };
 
   const handleUploadDocuments = () => {
-    alert('Upload All Documents');
+    navigate('/upload');
   };
 
   const handleScheduleMeeting = () => {

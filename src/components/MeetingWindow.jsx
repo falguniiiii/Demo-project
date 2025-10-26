@@ -20,45 +20,131 @@ export default function MeetingWindow() {
 
   const [captionsOn, setCaptionsOn] = useState(false);
   const [captions, setCaptions] = useState([]);
-  const demoLines = [
-    'Welcome everyone 👋',
-    'We will start in two minutes.',
-    'Please mute if you are not speaking.',
-    'The deck is in the Documents tab.',
-    'Any questions before we move on?',
-  ];
+  const recognitionRef = useRef(null);
+  const [captionError, setCaptionError] = useState('');
 
+  // Initialize speech recognition
   useEffect(() => {
-    let id;
-    if (captionsOn) {
-      id = setInterval(() => {
-        setCaptions(prev => [...prev.slice(-9), demoLines[Math.floor(Math.random() * demoLines.length)]]);
-      }, 2200);
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setCaptionError('Speech recognition not supported in this browser');
+      return;
     }
-    return () => clearInterval(id);
-  }, [captionsOn]);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        setCaptions(prev => {
+          const newCaptions = [...prev, finalTranscript.trim()];
+          // Keep only last 10 captions
+          return newCaptions.slice(-10);
+        });
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        setCaptionError('Microphone access denied for captions');
+      } else if (event.error === 'no-speech') {
+        // Restart recognition on no-speech error
+        if (captionsOn) {
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (e) {
+              console.log('Recognition restart error:', e);
+            }
+          }, 100);
+        }
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if captions are still on
+      if (captionsOn) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.log('Recognition restart error:', e);
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.log('Recognition stop error:', e);
+        }
+      }
+    };
+  }, []);
+
+  // Start/stop recognition based on captionsOn state
+  useEffect(() => {
+    if (!recognitionRef.current) return;
+
+    if (captionsOn && isMicOn) {
+      setCaptionError('');
+      try {
+        recognitionRef.current.start();
+        console.log('🎤 Speech recognition started');
+      } catch (e) {
+        if (e.message.includes('already started')) {
+          console.log('Recognition already running');
+        } else {
+          console.error('Failed to start recognition:', e);
+          setCaptionError('Failed to start captions');
+        }
+      }
+    } else {
+      try {
+        recognitionRef.current.stop();
+        console.log('⏹️ Speech recognition stopped');
+      } catch (e) {
+        console.log('Recognition stop error:', e);
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.log('Cleanup stop error:', e);
+        }
+      }
+    };
+  }, [captionsOn, isMicOn]);
 
   const [activeTab, setActiveTab] = useState('documents');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, user: 'John Doe', message: 'Hello everyone!', time: '10:30 AM' },
-    { id: 2, user: 'Jane Smith', message: 'Great to be here', time: '10:31 AM' }
-  ]);
+  const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
 
-  const [polls, setPolls] = useState([
-    {
-      id: 'p-1',
-      question: 'What time works best for the next meeting?',
-      options: [
-        { id: 'o-1', text: '9:00 AM', votes: 1 },
-        { id: 'o-2', text: '2:00 PM', votes: 2 },
-        { id: 'o-3', text: '5:00 PM', votes: 0 }
-      ],
-      status: 'open'
-    }
-  ]);
+  const [polls, setPolls] = useState([]);
   const [myVotes, setMyVotes] = useState({});
   const [creatingPoll, setCreatingPoll] = useState(false);
   const [newPollQ, setNewPollQ] = useState('');
@@ -122,16 +208,10 @@ export default function MeetingWindow() {
   }, []);
 
   const selfId = 'self';
-  const initialRemotes = [
-    { id: 'u-1', name: 'Sarah Johnson', isMuted: false, isVideoOff: false },
-    { id: 'u-2', name: 'Mike Chen', isMuted: true, isVideoOff: false },
-    { id: 'u-3', name: 'Alex Kumar', isMuted: false, isVideoOff: false },
-    { id: 'u-4', name: 'Emily Davis', isMuted: true, isVideoOff: false },
-  ];
 
+  // Start with only the local user (host)
   const [participants, setParticipants] = useState([
-    { id: selfId, name: userName, isMuted: !isMicOn, isVideoOff: !isVideoOn, isLocal: true },
-    ...initialRemotes
+    { id: selfId, name: userName, isMuted: !isMicOn, isVideoOff: !isVideoOn, isLocal: true }
   ]);
 
   useEffect(() => {
@@ -140,7 +220,22 @@ export default function MeetingWindow() {
     );
   }, [isMicOn, isVideoOn]);
 
-  const rows = Math.max(3, Math.ceil(participants.length / 2));
+  // Calculate grid columns dynamically based on participant count
+  // For 90+ people, we'll use a more compact grid
+  const getGridLayout = (count) => {
+    if (count <= 4) return { cols: 2, rows: 2 };
+    if (count <= 9) return { cols: 3, rows: 3 };
+    if (count <= 16) return { cols: 4, rows: 4 };
+    if (count <= 25) return { cols: 5, rows: 5 };
+    if (count <= 36) return { cols: 6, rows: 6 };
+    if (count <= 49) return { cols: 7, rows: 7 };
+    if (count <= 64) return { cols: 8, rows: 8 };
+    if (count <= 81) return { cols: 9, rows: 9 };
+    // For 90+ participants
+    return { cols: 10, rows: Math.ceil(count / 10) };
+  };
+
+  const gridLayout = getGridLayout(participants.length);
 
   const selfVideoRef = useRef(null);
   const streamRef = useRef(null);
@@ -161,14 +256,12 @@ export default function MeetingWindow() {
       console.log('🎥 manageMediaTracks called', { isMicOn, isVideoOn });
       setMediaError('');
       
-      // Stop all existing tracks first
       if (streamRef.current) {
         console.log('🛑 Stopping existing tracks');
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
 
-      // If both are off, just clear everything
       if (!isMicOn && !isVideoOn) {
         console.log('❌ Both off, clearing video');
         if (selfVideoRef.current) {
@@ -177,7 +270,6 @@ export default function MeetingWindow() {
         return;
       }
 
-      // Request only the tracks we need
       const constraints = {};
       if (isMicOn) {
         constraints.audio = true;
@@ -192,12 +284,10 @@ export default function MeetingWindow() {
 
       console.log('📞 Requesting media with constraints:', constraints);
       
-      // Get new stream with required tracks
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       console.log('✅ Got stream with tracks:', stream.getTracks().map(t => t.kind));
 
-      // Update video element if video is on
       if (selfVideoRef.current) {
         if (isVideoOn) {
           console.log('🎬 Setting video srcObject');
@@ -216,7 +306,6 @@ export default function MeetingWindow() {
     }
   };
 
-  // Initial setup
   useEffect(() => {
     manageMediaTracks();
     return () => {
@@ -224,7 +313,6 @@ export default function MeetingWindow() {
     };
   }, []);
 
-  // Update when mic or video toggles
   useEffect(() => {
     manageMediaTracks();
   }, [isMicOn, isVideoOn]);
@@ -282,8 +370,6 @@ export default function MeetingWindow() {
   const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47'];
   const gradsTo = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C'];
 
-  const hasLocalVideo = () => isVideoOn && streamRef.current && streamRef.current.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
-
   function handleSend() {
     const trimmed = newMessage.trim();
     if (!trimmed) return;
@@ -305,7 +391,13 @@ export default function MeetingWindow() {
       <div className="meeting__left">
         <div className="meeting__grid-pad">
           <div className="meeting__grid-wrap">
-            <div className="meeting__grid" style={{ gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+            <div 
+              className="meeting__grid" 
+              style={{ 
+                gridTemplateColumns: `repeat(${gridLayout.cols}, 1fr)`,
+                gridTemplateRows: `repeat(${gridLayout.rows}, 1fr)` 
+              }}
+            >
               {participants.map((p, idx) => {
                 const isLocal = p.isLocal;
                 const muted = isLocal ? !isMicOn : p.isMuted;
@@ -350,6 +442,21 @@ export default function MeetingWindow() {
 
         {captionsOn && (
           <div className="captions">
+            {captionError && (
+              <div className="captions__error" style={{ color: '#ef4444', marginBottom: '0.5rem' }}>
+                {captionError}
+              </div>
+            )}
+            {!captionError && captions.length === 0 && isMicOn && (
+              <div className="captions__line" style={{ opacity: 0.6 }}>
+                Listening... Start speaking to see captions
+              </div>
+            )}
+            {!isMicOn && (
+              <div className="captions__line" style={{ color: '#eab308' }}>
+                Microphone is muted - turn on mic for captions
+              </div>
+            )}
             {captions.map((line, i) => (
               <div key={i} className="captions__line">{line}</div>
             ))}
@@ -380,9 +487,16 @@ export default function MeetingWindow() {
           </button>
 
           <button
-            onClick={() => setCaptionsOn(v => !v)}
+            onClick={() => {
+              if (!captionsOn && !isMicOn) {
+                alert('Please turn on your microphone to enable captions');
+                return;
+              }
+              setCaptionsOn(v => !v);
+            }}
             className="btn-round"
             style={{ background: captionsOn ? '#0e0e0e' : '#fff', color: captionsOn ? '#fff' : '#000' }}
+            title={captionsOn ? 'Turn off captions' : 'Turn on captions'}
           >
             CC
           </button>
@@ -434,6 +548,11 @@ export default function MeetingWindow() {
           {activeTab === 'chats' && (
             <div className="chats">
               <div className="chats__list">
+                {chatMessages.length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                    No messages yet. Start the conversation!
+                  </div>
+                )}
                 {chatMessages.map((msg) => (
                   <div key={msg.id} className="msg">
                     <div className="msg__head">
@@ -513,6 +632,11 @@ export default function MeetingWindow() {
               )}
 
               <div className="polls__list">
+                {polls.length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                    No polls yet. {isHost && 'Create one to get started!'}
+                  </div>
+                )}
                 {polls.map((poll) => {
                   const total = totalVotes(poll);
                   const votedOptionId = myVotes[poll.id];

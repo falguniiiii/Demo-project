@@ -62,10 +62,15 @@ const DocumentUpload = () => {
     });
   };
 
+  // Navigate back to Host section
+  const handleBack = () => {
+    navigate('/host');
+  };
+
   return (
     <div className="doc-upload">
       <div className="doc-upload__header">
-        <button onClick={() => navigate(-1)} className="back-btn">
+        <button onClick={handleBack} className="back-btn">
           ← Back
         </button>
         <h1>Upload Documents</h1>
