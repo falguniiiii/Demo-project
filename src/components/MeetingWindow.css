@@ -304,34 +304,130 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .result-votes{font-size:12px;color:#6b7280;margin-top:4px;}
 
 /* =========================
-   Documents
+   Documents - UPDATED FOR EXPANDED VIEW
    ========================= */
-.docs{display:flex;flex-direction:column;height:100%;}
+.docs{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  gap:0;
+}
+
+/* Full height variant */
+.docs--fullheight{
+  height:100%;
+}
+
+/* Document header - removed actions section */
 .docs__bar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;border-bottom:1px solid #e5e7eb;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding:12px 16px;
+  border-bottom:1px solid #e5e7eb;
+  flex-shrink:0;
 }
-.docs__title{margin:0;font-size:18px;font-weight:800;color:#111;}
-.docs__actions{display:flex;gap:8px;}
-.docs__btn{padding:8px 12px;border-radius:8px;text-decoration:none;color:#fff;font-weight:600;}
-.docs__btn--open{background:#0e0e0e;}
-.docs__btn--download{background:#111827;}
 
+
+
+/* Document list - compact with scrolling */
 .docs__list{
-  display:flex;gap:8px;padding:10px 12px;overflow-x:auto;border-bottom:1px solid #e5e7eb;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:12px 16px;
+  overflow-y:auto;
+  border-bottom:1px solid #e5e7eb;
+  flex-shrink:0;
+  max-height:120px; /* Constrain to keep viewer large */
 }
-.doc-pill{
-  display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;
-  border:1px solid #e5e7eb;background:#fff;cursor:pointer;white-space:nowrap;
-}
-.doc-pill.active{background:#f3f4f6;border-color:#0e0e0e;}
-.doc-pill__name{font-size:13px;max-width:240px;overflow:hidden;text-overflow:ellipsis;}
 
-.docs__viewer{flex:1;overflow:hidden;position:relative;}
-.docs__img{max-width:100%;height:auto;border-radius:8px;}
-.docs__iframe{width:100%;height:80vh;border:1px solid #e5e7eb;border-radius:8px;}
-.docs__unsupported{color:#6b7280;font-size:14px;}
-.docs__empty{color:#6b7280;font-size:14px;}
+/* Document pill styling */
+.doc-pill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:all 0.2s ease;
+}
+
+.doc-pill:hover{
+  background:#f9fafb;
+  border-color:#9ca3af;
+}
+
+.doc-pill.active{
+  background:#0e0e0e;
+  color:#fff;
+  border-color:#0e0e0e;
+}
+
+.doc-pill__name{
+  font-size:13px;
+  max-width:200px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Document viewer - EXPANDED to take most space */
+.docs__viewer{
+  flex:1; /* Takes all remaining space */
+  overflow:hidden;
+  position:relative;
+  background:#f9fafb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:0; /* Important for flex child */
+  padding:16px;
+}
+
+/* Expanded variant for documents tab */
+.docs__viewer--expanded{
+  flex:1;
+  min-height:400px; /* Ensure good visibility */
+}
+
+/* Image display */
+.docs__img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* PDF iframe */
+.docs__iframe{
+  width:100%;
+  height:100%;
+  border:none;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Unsupported file message */
+.docs__unsupported{
+  color:#6b7280;
+  font-size:14px;
+  text-align:center;
+  padding:2rem;
+}
+
+/* Empty state */
+.docs__empty{
+  color:#6b7280;
+  font-size:14px;
+  text-align:center;
+  padding:2rem;
+}
 
 /* =========================
    Responsive
@@ -344,4 +440,15 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .meeting__left{height:48vh;}
   .meeting__right{height:52vh;width:100%;max-width:100%;}
   .meeting__grid{grid-template-columns:1fr 1fr;}
+  
+  /* Adjust document list for mobile */
+  .docs__list{
+    max-height:80px;
+    padding:8px 12px;
+  }
+  
+  /* Ensure viewer is still usable on mobile */
+  .docs__viewer--expanded{
+    min-height:250px;
+  }
 }

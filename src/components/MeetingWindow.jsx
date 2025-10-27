@@ -53,7 +53,6 @@ export default function MeetingWindow() {
       if (finalTranscript) {
         setCaptions(prev => {
           const newCaptions = [...prev, finalTranscript.trim()];
-          // Keep only last 10 captions
           return newCaptions.slice(-10);
         });
       }
@@ -64,7 +63,6 @@ export default function MeetingWindow() {
       if (event.error === 'not-allowed') {
         setCaptionError('Microphone access denied for captions');
       } else if (event.error === 'no-speech') {
-        // Restart recognition on no-speech error
         if (captionsOn) {
           setTimeout(() => {
             try {
@@ -78,7 +76,6 @@ export default function MeetingWindow() {
     };
 
     recognition.onend = () => {
-      // Auto-restart if captions are still on
       if (captionsOn) {
         try {
           recognition.start();
@@ -101,7 +98,6 @@ export default function MeetingWindow() {
     };
   }, []);
 
-  // Start/stop recognition based on captionsOn state
   useEffect(() => {
     if (!recognitionRef.current) return;
 
@@ -209,7 +205,6 @@ export default function MeetingWindow() {
 
   const selfId = 'self';
 
-  // Start with only the local user (host)
   const [participants, setParticipants] = useState([
     { id: selfId, name: userName, isMuted: !isMicOn, isVideoOff: !isVideoOn, isLocal: true }
   ]);
@@ -220,8 +215,6 @@ export default function MeetingWindow() {
     );
   }, [isMicOn, isVideoOn]);
 
-  // Calculate grid columns dynamically based on participant count
-  // For 90+ people, we'll use a more compact grid
   const getGridLayout = (count) => {
     if (count <= 4) return { cols: 2, rows: 2 };
     if (count <= 9) return { cols: 3, rows: 3 };
@@ -231,7 +224,6 @@ export default function MeetingWindow() {
     if (count <= 49) return { cols: 7, rows: 7 };
     if (count <= 64) return { cols: 8, rows: 8 };
     if (count <= 81) return { cols: 9, rows: 9 };
-    // For 90+ participants
     return { cols: 10, rows: Math.ceil(count / 10) };
   };
 
@@ -690,17 +682,7 @@ export default function MeetingWindow() {
           )}
 
           {activeTab === 'documents' && (
-            <div className="docs">
-              <div className="docs__bar">
-                <h3 className="docs__title">Documents</h3>
-                {activeDoc && (
-                  <div className="docs__actions">
-                    <a href={activeDoc.url} target="_blank" rel="noreferrer" className="docs__btn docs__btn--open">
-                      Open
-                    </a>
-                  </div>
-                )}
-              </div>
+            <div className="docs docs--fullheight">
 
               <div className="docs__list">
                 {documents.length === 0 && <div className="docs__empty">No documents available.</div>}
@@ -716,13 +698,13 @@ export default function MeetingWindow() {
                 ))}
               </div>
 
-              <div className="docs__viewer">
+              <div className="docs__viewer docs__viewer--expanded">
                 {activeDoc ? (
                   <>
                     {isImage(activeDoc) && <img src={activeDoc.url} alt={activeDoc.name} className="docs__img" />}
                     {isPdf(activeDoc) && <iframe title={activeDoc.name} src={activeDoc.url} className="docs__iframe" />}
                     {!isImage(activeDoc) && !isPdf(activeDoc) && (
-                      <div className="docs__unsupported">Preview not available. Click Open to view.</div>
+                      <div className="docs__unsupported">Preview not available for this file type.</div>
                     )}
                   </>
                 ) : (
