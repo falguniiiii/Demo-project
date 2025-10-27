@@ -113,8 +113,7 @@
 }
 
 .hero-text:hover {
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  transform: scale(1.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.404);
   transition: all 0.3s ease;
 }
 
@@ -186,8 +185,7 @@
 }
 
 .meeting-illustration:hover{
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  transform: scale(1.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.404);
   transition: all 0.3s ease;
 }
 
