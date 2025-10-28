@@ -38,7 +38,7 @@ export const ClassroomProvider = ({ children }) => {
     }));
     return newSubject;
   };
-
+  
   const addFiles = (classroomId, subjectId, files) => {
     const newFiles = Array.from(files).map(file => ({
       id: Date.now() + Math.random(),
