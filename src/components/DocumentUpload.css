@@ -8,7 +8,7 @@
 
 .doc-upload__header {
   background: white;
-  padding: 1.5rem 2rem;
+  padding: 1rem 1rem;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   justify-content: space-between;
@@ -18,23 +18,60 @@
   z-index: 10;
 }
 
+.doc-upload__header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .doc-upload__header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 600;
   margin: 0;
 }
 
-.back-btn {
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
+.back-btn{
+  width:auto;
+  height:auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:none !important;
+  background:transparent;
+  cursor:pointer;
+  transition: all .2s ease;
+  flex-shrink: 0;
+  padding: 2px;
+}
+.back-btn:hover{ 
+  transform: translateX(-3px);
+}
+.back-btn:active{ transform: translateX(-3px) scale(0.95); }
+.back-btn svg{ 
+  width:28px; 
+  height:28px; 
+  color:#000;
+  transition: all .2s ease;
 }
 
-.back-btn:hover {
-  background: #f3f4f6;
+
+.topbar .brand,
+.topbar .brand.brand--xl{
+  margin:0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000;
+  line-height:1.2;
+  letter-spacing:0;
+}
+
+.brand.brand--xl {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .done-btn {

@@ -188,16 +188,10 @@ function Login() {
     <div className="login-page">
       <header className="topbar">
         <div className="left-group">
-          <button
-            type="button"
-            className="back-btn"
-            onClick={handleBackClick}
-            aria-label="Go back"
-            title="Go back"
-          >
+          <button type="button" className="back-btn" onClick={handleBackClick} aria-label="Go back" title="Go back">
             <FiArrowLeft />
           </button>
-          <span className="landing-brand">Rural Meet</span>
+          <span className="brand brand--xl">Rural Meet</span>
         </div>
 
         <nav className="nav-pills">

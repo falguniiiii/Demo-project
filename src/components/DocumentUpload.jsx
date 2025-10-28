@@ -1,6 +1,7 @@
 // src/components/DocumentUpload.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiUnlock, FiArrowLeft, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FolderPlus, Plus, Upload, X, FileText, Trash2 } from 'lucide-react';
 import { useClassrooms } from '../context/ClassroomContext';
 import './DocumentUpload.css';
@@ -62,17 +63,19 @@ const DocumentUpload = () => {
     });
   };
 
-  // Navigate back to Host section
-  const handleBack = () => {
-    navigate('/host');
+  const handleBackClick = () => {
+    navigate("/host");
   };
 
   return (
     <div className="doc-upload">
       <div className="doc-upload__header">
-        <button onClick={handleBack} className="back-btn">
-          ← Back
-        </button>
+        <div className="doc-upload__header-left">
+          <button type="button" className="back-btn" onClick={handleBackClick} aria-label="Go back" title="Go back">
+            <FiArrowLeft />
+          </button>
+          <span className="brand brand--xl">Rural Meet</span>
+        </div>
         <h1>Upload Documents</h1>
         {classrooms.length > 0 && (
           <button onClick={handleDone} className="done-btn">

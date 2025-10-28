@@ -53,6 +53,10 @@ export default function Host() {
     navigate('/upload');
   };
 
+  const handleBackClick = () => {
+    navigate('/');
+  };
+
   const handleScheduleMeeting = () => {
     alert('Schedule Your Meeting');
   };
@@ -62,13 +66,7 @@ export default function Host() {
       {/* Top bar */}
       <header className="topbar">
         <div className="left-group">
-          <button
-            type="button"
-            className="back-btn"
-            onClick={() => window.history.back()}
-            aria-label="Go back"
-            title="Go back"
-          >
+          <button  type="button"  className="back-btn"  onClick={handleBackClick}  aria-label="Go back"  title="Go back">
             <FiArrowLeft />
           </button>
           <span className="landing-brand">Rural Meet</span>

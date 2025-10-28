@@ -19,7 +19,7 @@
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding: 6px 14px;                 /*compact height*/
+  padding: 10px 20px;
   border-bottom:1px solid #eaeaea;
   background:#fff;
   gap: 20px;
@@ -28,35 +28,43 @@
 .left-group{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:16px;
 }
 
 /* Back arrow */
 .back-btn{
-  width:34px;
-  height:34px;
+  width:auto;
+  height:auto;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  border:1px solid #e5e7eb;
-  background:#fff;
-  border-radius:9999px;
+  border:none !important;
+  background:transparent;
   cursor:pointer;
-  transition: background .2s, border-color .2s, transform .05s;
+  transition: all .2s ease;
+  flex-shrink: 0;
+  padding: 2px;
 }
-.back-btn:hover{ background:#f7f7f7; border-color:#d1d5db; }
-.back-btn:active{ transform: translateY(1px); }
-.back-btn svg{ width:18px; height:18px; color:#111; }
+.back-btn:hover{ 
+  transform: translateX(-3px);
+}
+.back-btn:active{ transform: translateX(-3px) scale(0.95); }
+.back-btn svg{ 
+  width:28px; 
+  height:28px; 
+  color:#000;
+  transition: all .2s ease;
+}
 
-/* Brand title (keep big but not too tall) */
+/* Brand title */
 .topbar .brand,
 .topbar .brand.brand--xl{
   margin:0;
   font-size: 1.5rem;
-  font-weight: bold;
-  color: black;
-  line-height:1.05;
-  letter-spacing:.2px;
+  font-weight: 700;
+  color: #000;
+  line-height:1.2;
+  letter-spacing:0;
 }
 
 /* Nav pills (Home / About / Login-Signup toggle) */
@@ -284,11 +292,11 @@
 }
 
 @media (max-width: 640px){
-  .topbar{ padding: 6px 10px; }
-  .back-btn{ width:32px; height:32px; }
-  .back-btn svg{ width:18px; height:18px; }
+  .topbar{ padding: 8px 12px; }
+  .back-btn svg{ width:24px; height:24px; }
   .topbar .brand,
-  .topbar .brand.brand--xl{ font-size: 22px; }
+  .topbar .brand.brand--xl{ font-size: 1.25rem; }
+  .nav-pills .pill{ padding: 6px 14px !important; font-size: 13px !important; }
 }
 
 /* ========== Validation styles ========== */
