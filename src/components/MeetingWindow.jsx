@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, FileText, PlusCircle, XCircle, Upload } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Hand, PhoneOff, Send, Smile, FileText, PlusCircle, XCircle, Upload, Users, UserX } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import './MeetingWindow.css';
 
@@ -134,7 +134,7 @@ export default function MeetingWindow() {
     };
   }, [captionsOn, isMicOn]);
 
-  const [activeTab, setActiveTab] = useState('documents');
+  const [activeTab, setActiveTab] = useState('participants');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [chatMessages, setChatMessages] = useState([]);
@@ -359,6 +359,17 @@ export default function MeetingWindow() {
 
   const closePoll = (pollId) => setPolls(prev => prev.map(p => p.id === pollId ? { ...p, status: 'closed' } : p));
 
+  const removeParticipant = (participantId) => {
+    if (!isHost) return;
+    if (participantId === selfId) {
+      alert("You cannot remove yourself from the meeting");
+      return;
+    }
+    if (window.confirm('Remove this participant from the meeting?')) {
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+    }
+  };
+
   const gradsFrom = ['#8B7355', '#B89968', '#D4AF6A', '#A67C52', '#8B6F47'];
   const gradsTo = ['#E8D4B8', '#F5E6D3', '#FFE5B4', '#DEB887', '#D2B48C'];
 
@@ -505,7 +516,7 @@ export default function MeetingWindow() {
           <div className="tabs__count">{participants.length} joined</div>
 
           <div className="tabgroup">
-            {['chats', 'polls', 'documents'].map(tab => (
+            {['participants', 'chats', 'polls', 'documents'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -537,6 +548,70 @@ export default function MeetingWindow() {
         </div>
 
         <div className="content">
+          {activeTab === 'participants' && (
+            <div className="participants">
+              <div className="participants__header">
+                <Users size={20} />
+                <span className="participants__count">{participants.length} {participants.length === 1 ? 'Participant' : 'Participants'}</span>
+              </div>
+              
+              <div className="participants__list">
+                {participants.map((p) => {
+                  const isLocalUser = p.id === selfId;
+                  const muted = isLocalUser ? !isMicOn : p.isMuted;
+                  const vOff = isLocalUser ? !isVideoOn : p.isVideoOff;
+                  
+                  return (
+                    <div key={p.id} className="participant-card">
+                      <div className="participant-card__left">
+                        <div className="participant-card__avatar">
+                          {p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="participant-card__info">
+                          <div className="participant-card__name">
+                            {p.name}
+                            {isLocalUser && <span className="participant-card__badge">You</span>}
+                            {isHost && p.id === selfId && <span className="participant-card__badge participant-card__badge--host">Host</span>}
+                          </div>
+                          <div className="participant-card__status">
+                            {muted ? (
+                              <span className="status-indicator status-indicator--muted">
+                                <MicOff size={12} /> Muted
+                              </span>
+                            ) : (
+                              <span className="status-indicator status-indicator--active">
+                                <Mic size={12} /> Active
+                              </span>
+                            )}
+                            {vOff ? (
+                              <span className="status-indicator status-indicator--muted">
+                                <VideoOff size={12} /> Camera Off
+                              </span>
+                            ) : (
+                              <span className="status-indicator status-indicator--active">
+                                <Video size={12} /> Camera On
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {isHost && !isLocalUser && (
+                        <button 
+                          className="participant-card__remove"
+                          onClick={() => removeParticipant(p.id)}
+                          title="Remove participant"
+                        >
+                          <UserX size={18} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'chats' && (
             <div className="chats">
               <div className="chats__list">
