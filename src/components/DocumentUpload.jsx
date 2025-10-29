@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
-import { FolderPlus, Plus, Upload, X, FileText, Trash2 } from 'lucide-react';
+import { FolderPlus, Plus, Upload, X, FileText, Trash2, Copy, Check } from 'lucide-react';
 import { useClassrooms } from '../context/ClassroomContext';
 import './DocumentUpload.css';
 
@@ -23,6 +23,7 @@ const DocumentUpload = () => {
   const [newSubjectName, setNewSubjectName] = useState('');
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [errors, setErrors] = useState({});
+  const [copiedCode, setCopiedCode] = useState(null);
 
   // Validation functions
   const validateClassroomName = (name) => {
@@ -38,9 +39,6 @@ const DocumentUpload = () => {
     }
     if (!/^[a-zA-Z0-9\s\-_]+$/.test(trimmed)) {
       return 'Classroom name can only contain letters, numbers, spaces, hyphens, and underscores';
-    }
-    if (classrooms.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
-      return 'A classroom with this name already exists';
     }
     return null;
   };
@@ -65,6 +63,17 @@ const DocumentUpload = () => {
     return null;
   };
 
+  // Copy classroom code to clipboard
+  const handleCopyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (err) {
+      alert('Failed to copy code');
+    }
+  };
+
   // Create Classroom with validation
   const handleCreateClassroom = () => {
     const error = validateClassroomName(newClassroomName);
@@ -72,10 +81,13 @@ const DocumentUpload = () => {
       setErrors({ classroom: error });
       return;
     }
-    createClassroom(newClassroomName.trim());
+    const classroom = createClassroom(newClassroomName.trim());
     setNewClassroomName('');
     setShowCreateClassroom(false);
     setErrors({});
+    
+    // Show the classroom code to the user
+    alert(`Classroom created!\n\nClassroom Code: ${classroom.code}\n\nShare this code with participants so they can join your classroom.`);
   };
 
   // Add Subject with validation
@@ -224,7 +236,24 @@ const DocumentUpload = () => {
             {classrooms.map(classroom => (
               <div key={classroom.id} className="classroom-card">
                 <div className="classroom-card__header">
-                  <h3>{classroom.name}</h3>
+                  <div>
+                    <h3>{classroom.name}</h3>
+                    <div className="classroom-code">
+                      <span className="code-label">Code:</span>
+                      <span className="code-value">{classroom.code}</span>
+                      <button
+                        onClick={() => handleCopyCode(classroom.code)}
+                        className="copy-code-btn"
+                        title="Copy classroom code"
+                      >
+                        {copiedCode === classroom.code ? (
+                          <Check size={14} color="#10b981" />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                   <button
                     onClick={() => {
                       setSelectedClassroom(classroom);
@@ -323,6 +352,9 @@ const DocumentUpload = () => {
                 <p className="error-message">{errors.classroom}</p>
               )}
               <p className="input-hint">Use descriptive names like "Grade 10" or "Advanced Mathematics"</p>
+              <p className="input-hint" style={{ marginTop: '8px', fontWeight: '500' }}>
+                A unique 6-character code will be generated that participants can use to join this classroom
+              </p>
             </div>
             <div className="modal-footer">
               <button onClick={handleCloseCreateClassroom} className="cancel-btn">

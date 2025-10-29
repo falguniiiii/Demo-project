@@ -144,18 +144,70 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Updated classroom card header to accommodate code display */
 .classroom-card__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
+.classroom-card__header > div:first-child {
+  flex: 1;
+}
+
 .classroom-card__header h3 {
   font-size: 1.25rem;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Classroom code display styles */
+.classroom-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  font-size: 13px;
+  width: fit-content;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.code-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.code-value {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+
+.copy-code-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.copy-code-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.copy-code-btn:active {
+  transform: scale(0.95);
 }
 
 .add-subject-btn {
@@ -163,16 +215,17 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  border: none;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  align-self: flex-start;
 }
 
 .add-subject-btn:hover {
-  background: #e5e7eb;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .subjects-list {
@@ -228,6 +281,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.no-files {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0.5rem;
 }
 
 .file-item {
@@ -342,11 +402,28 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .modal-input:focus {
   outline: none;
   border-color: #111;
+}
+
+.modal-input--error {
+  border-color: #ef4444;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.input-hint {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
 }
 
 .modal-footer {
