@@ -1,5 +1,5 @@
 // src/context/ClassroomContext.jsx
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const ClassroomContext = createContext();
 
@@ -29,16 +29,41 @@ const generateUniqueId = (prefix = '') => {
   return `${prefix}${timestamp}_${random}_${userIdentifier}`;
 };
 
+// Storage keys
+const STORAGE_KEYS = {
+  CLASSROOMS: 'ruralMeet_classrooms',
+  USER_ID: 'ruralMeet_userId',
+  HOST_NAME: 'ruralMeet_hostName'
+};
+
 export const ClassroomProvider = ({ children }) => {
-  const [classrooms, setClassrooms] = useState([]);
+  // Initialize state from localStorage
+  const [classrooms, setClassrooms] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CLASSROOMS);
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading classrooms:', error);
+      return [];
+    }
+  });
 
   // Initialize user ID if not exists
-  React.useEffect(() => {
-    if (!sessionStorage.getItem('userId')) {
+  useEffect(() => {
+    if (!sessionStorage.getItem(STORAGE_KEYS.USER_ID)) {
       const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      sessionStorage.setItem('userId', userId);
+      sessionStorage.setItem(STORAGE_KEYS.USER_ID, userId);
     }
   }, []);
+
+  // Save classrooms to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CLASSROOMS, JSON.stringify(classrooms));
+    } catch (error) {
+      console.error('Error saving classrooms:', error);
+    }
+  }, [classrooms]);
 
   const createClassroom = (name) => {
     let classroomCode;
@@ -55,9 +80,9 @@ export const ClassroomProvider = ({ children }) => {
       code: classroomCode,
       name: name.trim(),
       subjects: [],
-      createdBy: sessionStorage.getItem('userId'),
+      createdBy: sessionStorage.getItem(STORAGE_KEYS.USER_ID),
       createdAt: new Date().toISOString(),
-      hostName: sessionStorage.getItem('hostName') || 'Host'
+      hostName: sessionStorage.getItem(STORAGE_KEYS.HOST_NAME) || 'Host'
     };
     
     setClassrooms(prev => [...prev, newClassroom]);
@@ -114,6 +139,11 @@ export const ClassroomProvider = ({ children }) => {
           ...classroom,
           subjects: classroom.subjects.map(subject => {
             if (subject.id === subjectId) {
+              // Revoke the object URL to free memory
+              const fileToDelete = subject.files.find(f => f.id === fileId);
+              if (fileToDelete && fileToDelete.url) {
+                URL.revokeObjectURL(fileToDelete.url);
+              }
               return { ...subject, files: subject.files.filter(f => f.id !== fileId) };
             }
             return subject;
@@ -122,6 +152,38 @@ export const ClassroomProvider = ({ children }) => {
       }
       return classroom;
     }));
+  };
+
+  const deleteClassroom = (classroomId) => {
+    setClassrooms(prev => {
+      const classroom = prev.find(c => c.id === classroomId);
+      if (classroom) {
+        // Revoke all file URLs in this classroom
+        classroom.subjects.forEach(subject => {
+          subject.files.forEach(file => {
+            if (file.url) {
+              URL.revokeObjectURL(file.url);
+            }
+          });
+        });
+      }
+      return prev.filter(c => c.id !== classroomId);
+    });
+  };
+
+  const clearAllClassrooms = () => {
+    // Revoke all object URLs before clearing
+    classrooms.forEach(classroom => {
+      classroom.subjects.forEach(subject => {
+        subject.files.forEach(file => {
+          if (file.url) {
+            URL.revokeObjectURL(file.url);
+          }
+        });
+      });
+    });
+    setClassrooms([]);
+    localStorage.removeItem(STORAGE_KEYS.CLASSROOMS);
   };
 
   const getAllDocuments = () => {
@@ -158,6 +220,8 @@ export const ClassroomProvider = ({ children }) => {
     addSubject,
     addFiles,
     deleteFile,
+    deleteClassroom,
+    clearAllClassrooms,
     getAllDocuments,
     getClassroomByCode,
     getClassroomById
