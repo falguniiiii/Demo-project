@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
-import { FolderPlus, Plus, Upload, X, FileText, Trash2, Copy, Check } from 'lucide-react';
+import { FolderPlus, Plus, Upload, X, FileText, Trash2, Copy, Check, Trash } from 'lucide-react';
 import { useClassrooms } from '../context/ClassroomContext';
 import './DocumentUpload.css';
 
@@ -14,6 +14,7 @@ const DocumentUpload = () => {
     addSubject, 
     addFiles, 
     deleteFile,
+    deleteClassroom,
     getAllDocuments 
   } = useClassrooms();
 
@@ -35,7 +36,7 @@ const DocumentUpload = () => {
       return 'Classroom name must be at least 2 characters';
     }
     if (trimmed.length > 50) {
-      return 'Classroom name must be less than 50 characters';
+      return 'Classroom name must be less than 40 characters';
     }
     if (!/^[a-zA-Z0-9\s\-_]+$/.test(trimmed)) {
       return 'Classroom name can only contain letters, numbers, spaces, hyphens, and underscores';
@@ -151,6 +152,13 @@ const DocumentUpload = () => {
     }
   };
 
+  // Delete Classroom with confirmation
+  const handleDeleteClassroom = (classroomId, classroomName) => {
+    if (window.confirm(`Are you sure you want to delete classroom "${classroomName}"? This will delete all subjects and files in this classroom.`)) {
+      deleteClassroom(classroomId);
+    }
+  };
+
   // Done - Navigate to Meeting with Documents
   const handleDone = () => {
     const allDocs = getAllDocuments();
@@ -254,16 +262,25 @@ const DocumentUpload = () => {
                       </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedClassroom(classroom);
-                      setShowAddSubject(true);
-                    }}
-                    className="add-subject-btn"
-                  >
-                    <Plus size={16} />
-                    Add Subject
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <button
+                      onClick={() => {
+                        setSelectedClassroom(classroom);
+                        setShowAddSubject(true);
+                      }}
+                      className="add-subject-btn"
+                    >
+                      <Plus size={16} />
+                      Add Subject
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClassroom(classroom.id, classroom.name)}
+                      className="delete-classroom-btn"
+                      title="Delete classroom"
+                    >
+                      <Trash size={16} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="subjects-list">
