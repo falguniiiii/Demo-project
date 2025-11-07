@@ -52,7 +52,7 @@
 
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(to bottom right, #d7d9fa, #f3f5e7);
+  background: linear-gradient(to bottom,  #d7d9fa, #f3f5e7);
   min-height: calc(50vh - 110px);
   display: flex;
   align-items: center;

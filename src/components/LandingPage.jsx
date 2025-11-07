@@ -91,7 +91,7 @@ const LandingPage = () => {
             <div className="hero-image">
               <div className="meeting-illustration">
                 <img
-                  src="/Screenshot%202025-09-29%20121212.jpg"
+                  src="Screenshot 2025-11-07 193951.png"
                   alt="Meeting illustration"
                 />
               </div>
